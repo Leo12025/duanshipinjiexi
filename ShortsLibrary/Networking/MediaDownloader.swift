@@ -6,10 +6,26 @@ enum MediaDownloader {
     static func download(
         url: URL,
         to destination: URL,
+        taskID: UUID? = nil,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws -> URL {
-        try await DownloadManager.shared.download(from: url, to: destination, progress: progress)
+        if let taskID {
+            try await DownloadManager.shared.download(
+                from: url,
+                to: destination,
+                taskID: taskID,
+                progress: progress
+            )
+        } else {
+            try await DownloadManager.shared.download(from: url, to: destination, progress: progress)
+        }
         return destination
+    }
+
+    static func cancel(taskID: UUID) {
+        Task { @MainActor in
+            DownloadManager.shared.cancel(taskID: taskID)
+        }
     }
 
     static func probeVideo(at url: URL) async -> (duration: Double?, width: Int?, height: Int?, byteSize: Int64?) {

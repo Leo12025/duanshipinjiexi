@@ -52,7 +52,12 @@ enum MediaRetryService {
                 destination: destination,
                 label: "视频 · \(item.title)",
                 onFinish: { location in
-                    let info = await MediaDownloader.probeVideo(at: location)
+                    do {
+                        try await Self.muxIfNeeded(item: item, video: location, destination: destination)
+                    } catch {
+                        markFailure("音轨合成：\(error.localizedDescription)")
+                    }
+                    let info = await MediaDownloader.probeVideo(at: destination)
                     if item.videoFile == nil {
                         LibraryRepository.shared.addFile(
                             to: item,
@@ -218,6 +223,7 @@ enum MediaRetryService {
 
         do {
             try await MediaDownloader.download(url: url, to: destination)
+            try await muxIfNeeded(item: item, video: destination, destination: destination)
             let info = await MediaDownloader.probeVideo(at: destination)
             if item.videoFile == nil {
                 LibraryRepository.shared.addFile(
@@ -314,6 +320,32 @@ enum MediaRetryService {
                 failures.append("图片 \(index + 1)：\(error.localizedDescription)")
             }
         }
+    }
+
+    private static func muxIfNeeded(item: LibraryItem, video: URL, destination: URL) async throws {
+        guard item.needsAudioMux,
+              let audioString = item.sourceAudioURLString,
+              let audioURL = URL(string: audioString) else { return }
+
+        let directory = destination.deletingLastPathComponent()
+        let temporaryAudio = directory.appendingPathComponent("audio-source.m4a")
+        let muxed = directory.appendingPathComponent("video-muxed.mp4")
+        defer {
+            try? FileManager.default.removeItem(at: temporaryAudio)
+            try? FileManager.default.removeItem(at: muxed)
+        }
+
+        try await MediaDownloader.download(url: audioURL, to: temporaryAudio)
+        try await MediaMuxer.mux(video: video, audio: temporaryAudio, to: muxed)
+
+        if video.path != destination.path {
+            try? FileManager.default.removeItem(at: video)
+        }
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.removeItem(at: destination)
+        }
+        try FileManager.default.moveItem(at: muxed, to: destination)
+        item.needsAudioMux = false
     }
 
     private static func audioMimeType(for ext: String) -> String {

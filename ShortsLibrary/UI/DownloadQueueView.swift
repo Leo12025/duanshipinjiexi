@@ -36,7 +36,19 @@ struct DownloadQueueView: View {
                                     Text(statusText(task.status))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
+                                    if task.status != .done && task.status != .failed {
+                                        if task.status == .paused {
+                                            Button("继续") { queue.resume(id: task.id) }
+                                        } else {
+                                            Button("暂停") { queue.pause(id: task.id) }
+                                        }
+                                    }
+                                    if task.status != .done {
+                                        Button("取消") { queue.cancel(id: task.id) }
+                                    }
                                 }
+                                .buttonStyle(.borderless)
+                                .font(.caption)
                                 if task.status == .running {
                                     ProgressView(value: task.progress)
                                 }
@@ -87,6 +99,7 @@ struct DownloadQueueView: View {
         switch status {
         case .pending: return "等待中"
         case .running: return "下载中"
+        case .paused: return "已暂停"
         case .done: return "完成"
         case .failed: return "失败"
         }

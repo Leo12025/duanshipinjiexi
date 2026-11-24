@@ -5,12 +5,14 @@ import Combine
 enum QueueTaskStatus: String {
     case pending
     case running
+    case paused
     case done
     case failed
 }
 
 struct DownloadQueueTask: Identifiable {
     let id = UUID()
+    let downloadID = UUID()
     let url: URL
     let destination: URL
     let label: String
@@ -30,6 +32,7 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
     @Published private(set) var waitingForNetwork = false
 
     private var cancellables: Set<AnyCancellable> = []
+    private var cancelledIDs: Set<UUID> = []
 
     private init() {
         UserDefaults.standard.register(defaults: [
@@ -78,6 +81,37 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
 
     func clearCompleted() {
         tasks.removeAll { $0.status == .done || $0.status == .failed }
+    }
+
+    func cancel(id: UUID) {
+        guard let task = tasks.first(where: { $0.id == id }) else { return }
+        if task.status == .running {
+            cancelledIDs.insert(id)
+            MediaDownloader.cancel(taskID: task.downloadID)
+        }
+        if let index = tasks.firstIndex(where: { $0.id == id }) {
+            tasks[index].status = .failed
+            tasks[index].error = "已取消"
+        }
+        task.onError?("已取消")
+    }
+
+    func pause(id: UUID) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        guard tasks[index].status == .pending || tasks[index].status == .running else { return }
+        if tasks[index].status == .running {
+            cancelledIDs.insert(id)
+            MediaDownloader.cancel(taskID: tasks[index].downloadID)
+        }
+        tasks[index].status = .paused
+    }
+
+    func resume(id: UUID) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }),
+              tasks[index].status == .paused else { return }
+        tasks[index].status = .pending
+        tasks[index].error = nil
+        settingsChanged()
     }
 
     private var canStart: Bool {
@@ -134,7 +168,11 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
         updateStatus(id: id, status: .running)
 
         do {
-            try await MediaDownloader.download(url: task.url, to: task.destination) { [weak self] value in
+            try await MediaDownloader.download(
+                url: task.url,
+                to: task.destination,
+                taskID: task.downloadID
+            ) { [weak self] value in
                 Task { @MainActor in self?.updateProgress(id: id, value: value) }
             }
             updateStatus(id: id, status: .done)
@@ -143,6 +181,7 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
                 NotificationService.shared.notifyDownloadFinished(label: task.label)
             }
         } catch {
+            if cancelledIDs.remove(id) != nil { return }
             guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
             tasks[index].status = .failed
             tasks[index].error = error.localizedDescription

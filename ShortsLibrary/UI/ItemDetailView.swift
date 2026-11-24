@@ -43,6 +43,12 @@ struct ItemDetailView: View {
                             .foregroundStyle(.secondary)
                     }
 
+                    if item.needsAudioMux {
+                        Label("音轨尚未合成，可重新下载修复", systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+
                     if let pageURL = item.pageURL {
                         Link("打开原始链接", destination: pageURL)
                             .font(.footnote)

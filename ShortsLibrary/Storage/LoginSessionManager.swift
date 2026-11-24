@@ -28,6 +28,15 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
         }
     }
 
+    var profileURL: URL {
+        switch self {
+        case .douyin: return URL(string: "https://www.douyin.com/user/self")!
+        case .kuaishou: return URL(string: "https://www.kuaishou.com/profile")!
+        case .xiaohongshu: return URL(string: "https://www.xiaohongshu.com/user/profile")!
+        case .bilibili: return URL(string: "https://account.bilibili.com/account/home")!
+        }
+    }
+
     var cookieDomain: String {
         switch self {
         case .douyin: return "douyin.com"
@@ -75,7 +84,36 @@ final class LoginSessionManager: ObservableObject {
 
     func refresh() async {
         for platform in PlatformLogin.allCases {
-            states[platform] = await isLoggedIn(platform)
+            guard await isLoggedIn(platform) else {
+                states[platform] = false
+                continue
+            }
+            states[platform] = await verify(platform)
+        }
+    }
+
+    func verify(_ platform: PlatformLogin) async -> Bool {
+        guard await isLoggedIn(platform) else { return false }
+        var request = URLRequest(url: platform.profileURL)
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+            forHTTPHeaderField: "User-Agent"
+        )
+        if let cookie = await Self.cookieHeader(for: platform.profileURL) {
+            request.setValue(cookie, forHTTPHeaderField: "Cookie")
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  (200...299).contains(http.statusCode) else { return false }
+            let final = http.url?.absoluteString.lowercased() ?? ""
+            if final.contains("login") || final.contains("passport") { return false }
+            let body = String(data: data.prefix(64 * 1024), encoding: .utf8)?.lowercased() ?? ""
+            if body.contains("请先登录") || body.contains("登录后查看") { return false }
+            return true
+        } catch {
+            return false
         }
     }
 
@@ -89,8 +127,25 @@ final class LoginSessionManager: ObservableObject {
         return await isLoggedIn(platform)
     }
 
-    func isLoggedIn(_ platform: PlatformLogin) async -> Bool {
+    static func cookieHeader(for url: URL) async -> String? {
+        let host = url.host()?.lowercased() ?? ""
+        guard !host.isEmpty else { return nil }
         let cookies = await allCookies()
+        let now = Date()
+        let matched = cookies.filter { cookie in
+            if let expires = cookie.expiresDate, expires < now { return false }
+            let domain = cookie.domain
+                .lowercased()
+                .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+            guard !domain.isEmpty else { return false }
+            return host == domain || host.hasSuffix(".\(domain)")
+        }
+        guard !matched.isEmpty else { return nil }
+        return matched.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+    }
+
+    func isLoggedIn(_ platform: PlatformLogin) async -> Bool {
+        let cookies = await Self.allCookies()
         let now = Date()
         return cookies.contains { cookie in
             let domain = cookie.domain.lowercased()
@@ -104,14 +159,14 @@ final class LoginSessionManager: ObservableObject {
     }
 
     func logout(_ platform: PlatformLogin) async {
-        let cookies = await allCookies()
+        let cookies = await Self.allCookies()
         for cookie in cookies where cookie.domain.lowercased().hasSuffix(platform.cookieDomain) {
             await deleteCookie(cookie)
         }
         await refresh()
     }
 
-    private func allCookies() async -> [HTTPCookie] {
+    private static func allCookies() async -> [HTTPCookie] {
         await withCheckedContinuation { continuation in
             WKWebsiteDataStore.default().httpCookieStore.getAllCookies { cookies in
                 continuation.resume(returning: cookies)
@@ -126,4 +181,8 @@ final class LoginSessionManager: ObservableObject {
             }
         }
     }
+}
+
+extension Notification.Name {
+    static let openPlatformLogin = Notification.Name("shorts.openPlatformLogin")
 }

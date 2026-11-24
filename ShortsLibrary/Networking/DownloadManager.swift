@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 final class DownloadManager {
     static let shared = DownloadManager()
 
@@ -7,6 +8,7 @@ final class DownloadManager {
     private let session: URLSession
     private let delegate = DownloadSessionDelegate.shared
     private let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+    private var activeTasks: [UUID: URLSessionTask] = [:]
 
     private init() {
         let configuration = URLSessionConfiguration.background(withIdentifier: Self.sessionIdentifier)
@@ -20,6 +22,7 @@ final class DownloadManager {
         from url: URL,
         to destination: URL,
         resumeFromPartial: Bool = true,
+        taskID: UUID = UUID(),
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws {
         let fm = FileManager.default
@@ -36,11 +39,19 @@ final class DownloadManager {
         func start(range: Bool) async throws -> (URL, HTTPURLResponse) {
             var request = URLRequest(url: url)
             request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+            if let referer = self.referer(for: url) {
+                request.setValue(referer, forHTTPHeaderField: "Referer")
+            }
+            if let cookie = await LoginSessionManager.cookieHeader(for: url) {
+                request.setValue(cookie, forHTTPHeaderField: "Cookie")
+            }
             if range && offset > 0 {
                 request.setValue("bytes=\(offset)-", forHTTPHeaderField: "Range")
             }
 
             let task = session.downloadTask(with: request)
+            activeTasks[taskID] = task
+            defer { activeTasks[taskID] = nil }
             delegate.register(
                 task: task,
                 destination: destination,
@@ -69,6 +80,27 @@ final class DownloadManager {
             throw AppError.badStatus(result.1.statusCode)
         }
         progress?(1)
+    }
+
+    func cancel(taskID: UUID) {
+        activeTasks[taskID]?.cancel()
+    }
+
+    private func referer(for url: URL) -> String? {
+        let host = url.host()?.lowercased() ?? ""
+        if host.contains("bilibili") || host.contains("bilivideo") || host.contains("hdslb") {
+            return "https://www.bilibili.com/"
+        }
+        if host.contains("douyin") || host.contains("iesdouyin") {
+            return "https://www.douyin.com/"
+        }
+        if host.contains("kuaishou") || host.contains("chenzhongtech") || host.contains("gifshow") {
+            return "https://www.kuaishou.com/"
+        }
+        if host.contains("xiaohongshu") || host.contains("xhscdn") {
+            return "https://www.xiaohongshu.com/"
+        }
+        return nil
     }
 }
 
