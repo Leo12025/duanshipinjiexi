@@ -30,7 +30,7 @@ struct AddLinkView: View {
                         Text("已识别：\(detectedPlatform)。解析后任务会进入下载队列。")
                             .foregroundStyle(.green)
                     } else {
-                        Text("支持抖音、快手、小红书。粘贴整段分享文案即可自动识别。")
+                        Text("支持抖音、快手、小红书、B站。粘贴整段分享文案即可自动识别。")
                     }
                 }
 

@@ -132,7 +132,11 @@ struct ItemDetailView: View {
             VideoPlayerView(url: video.fileURL)
                 .frame(height: 260)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-        } else if item.kindEnum == .imageText, !item.imageFiles.isEmpty {
+        } else if item.kindEnum == .audio, let audio = item.audioFile, audio.existsOnDisk {
+            AudioPlayerView(url: audio.fileURL)
+                .frame(height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else if [.image, .imageText, .dynamic].contains(item.kindEnum), !item.imageFiles.isEmpty {
             ImageViewerView(urls: item.imageFiles.filter { $0.existsOnDisk }.map(\.fileURL))
                 .frame(height: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -167,6 +171,11 @@ struct ItemDetailView: View {
     }
 
     private func saveToPhotos() async {
+        if item.kindEnum == .audio {
+            toast = "音频不支持保存到相册"
+            return
+        }
+
         do {
             if item.kindEnum == .video,
                let video = item.videoFile,
@@ -203,6 +212,7 @@ extension MediaSource {
         case .douyin: return "music.note"
         case .kuaishou: return "bolt"
         case .xiaohongshu: return "book"
+        case .bilibili: return "tv"
         }
     }
 }

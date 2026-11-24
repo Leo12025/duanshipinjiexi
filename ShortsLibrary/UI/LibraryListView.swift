@@ -42,10 +42,18 @@ struct LibraryListView: View {
             result = activeItems.filter { $0.sourceEnum == .kuaishou }
         case .xiaohongshu:
             result = activeItems.filter { $0.sourceEnum == .xiaohongshu }
+        case .bilibili:
+            result = activeItems.filter { $0.sourceEnum == .bilibili }
         case .video:
             result = activeItems.filter { $0.kindEnum == .video }
+        case .image:
+            result = activeItems.filter { $0.kindEnum == .image }
         case .imageText:
             result = activeItems.filter { $0.kindEnum == .imageText }
+        case .dynamic:
+            result = activeItems.filter { $0.kindEnum == .dynamic }
+        case .audio:
+            result = activeItems.filter { $0.kindEnum == .audio }
         case .favorites:
             result = activeItems.filter { $0.isFavorite }
         case .trash:
@@ -131,7 +139,7 @@ struct LibraryListView: View {
             }
 
             HStack(alignment: .top, spacing: 8) {
-                TextField("粘贴抖音 / 快手 / 小红书分享文案或链接", text: $inputText, axis: .vertical)
+                TextField("粘贴抖音 / 快手 / 小红书 / B站分享文案或链接", text: $inputText, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...3)
                     .autocorrectionDisabled()
