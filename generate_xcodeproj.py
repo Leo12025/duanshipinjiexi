@@ -16,6 +16,10 @@ def ident(name: str) -> str:
 swift_files = sorted(
     str(path.relative_to(ROOT)) for path in SOURCE_ROOT.rglob("*.swift")
 )
+TEST_ROOT = ROOT / "ShortsLibraryTests"
+test_swift_files = sorted(
+    str(path.relative_to(ROOT)) for path in TEST_ROOT.rglob("*.swift")
+) if TEST_ROOT.exists() else []
 asset_path = "ShortsLibrary/Assets.xcassets"
 privacy_path = "ShortsLibrary/PrivacyInfo.xcprivacy"
 info_path = "ShortsLibrary/Info.plist"
@@ -43,8 +47,24 @@ project_debug = ident("config:project.debug")
 project_release = ident("config:project.release")
 target_debug = ident("config:target.debug")
 target_release = ident("config:target.release")
+test_group = ident("object:group.tests")
+test_target_id = ident("object:target.tests")
+test_product_path = "ShortsLibraryTests.xctest"
+test_product_ref = ident("file:" + test_product_path)
+test_sources_phase = ident("phase:tests.sources")
+test_frameworks_phase = ident("phase:tests.frameworks")
+test_cfg_list = ident("configlist:tests")
+test_debug = ident("config:tests.debug")
+test_release = ident("config:tests.release")
+xctest_ref = ident("file:XCTest.framework")
+xctest_build = ident("build:XCTest.framework")
+app_product_test_build = ident("build:app.product.for.tests")
+target_dependency_id = ident("dependency:tests.to.app")
+container_proxy_id = ident("proxy:tests.to.app")
 
 source_ids = []
+test_source_ids = []
+test_group_children = []
 resource_ids = []
 group_children = []
 
@@ -62,6 +82,20 @@ for rel in swift_files:
     add(build, isa="PBXBuildFile", fileRef=ref)
     source_ids.append(build)
     group_children.append(ref)
+
+for rel in test_swift_files:
+    ref = ident("file:" + rel)
+    build = ident("build:" + rel)
+    add(
+        ref,
+        isa="PBXFileReference",
+        lastKnownFileType="sourcecode.swift",
+        path=rel,
+        sourceTree="SOURCE_ROOT",
+    )
+    add(build, isa="PBXBuildFile", fileRef=ref)
+    test_source_ids.append(build)
+    test_group_children.append(ref)
 
 asset_ref = ident("file:" + asset_path)
 asset_build = ident("build:" + asset_path)
@@ -109,9 +143,28 @@ add(
 )
 
 add(
+    test_product_ref,
+    isa="PBXFileReference",
+    explicitFileType="wrapper.cfbundle",
+    includeInIndex="0",
+    path=test_product_path,
+    sourceTree="BUILT_PRODUCTS_DIR",
+)
+add(
+    xctest_ref,
+    isa="PBXFileReference",
+    lastKnownFileType="wrapper.framework",
+    name="XCTest.framework",
+    path="System/Library/Frameworks/XCTest.framework",
+    sourceTree="SDKROOT",
+)
+add(xctest_build, isa="PBXBuildFile", fileRef=xctest_ref)
+add(app_product_test_build, isa="PBXBuildFile", fileRef=product_ref)
+
+add(
     main_group,
     isa="PBXGroup",
-    children=[sources_group, products_group],
+    children=[sources_group, test_group, products_group],
     sourceTree="<group>",
 )
 add(
@@ -122,9 +175,16 @@ add(
     sourceTree="<group>",
 )
 add(
+    test_group,
+    isa="PBXGroup",
+    children=test_group_children,
+    name="Tests",
+    sourceTree="<group>",
+)
+add(
     products_group,
     isa="PBXGroup",
-    children=[product_ref],
+    children=[product_ref, test_product_ref],
     name="Products",
     sourceTree="<group>",
 )
@@ -152,6 +212,35 @@ add(
 )
 
 add(
+    test_sources_phase,
+    isa="PBXSourcesBuildPhase",
+    buildActionMask="2147483647",
+    files=test_source_ids,
+    runOnlyForDeploymentPostprocessing="0",
+)
+add(
+    test_frameworks_phase,
+    isa="PBXFrameworksBuildPhase",
+    buildActionMask="2147483647",
+    files=[xctest_build, app_product_test_build],
+    runOnlyForDeploymentPostprocessing="0",
+)
+add(
+    container_proxy_id,
+    isa="PBXContainerItemProxy",
+    containerPortal=project_id,
+    proxyType=1,
+    remoteGlobalIDString=target_id,
+    remoteInfo="ShortsLibrary",
+)
+add(
+    target_dependency_id,
+    isa="PBXTargetDependency",
+    target=target_id,
+    targetProxy=container_proxy_id,
+)
+
+add(
     target_id,
     isa="PBXNativeTarget",
     buildConfigurationList=target_cfg_list,
@@ -162,6 +251,19 @@ add(
     productName="ShortsLibrary",
     productReference=product_ref,
     productType="com.apple.product-type.application",
+)
+
+add(
+    test_target_id,
+    isa="PBXNativeTarget",
+    buildConfigurationList=test_cfg_list,
+    buildPhases=[test_sources_phase, test_frameworks_phase],
+    buildRules=[],
+    dependencies=[target_dependency_id],
+    name="ShortsLibraryTests",
+    productName="ShortsLibraryTests",
+    productReference=test_product_ref,
+    productType="com.apple.product-type.bundle.unit-test",
 )
 
 common_settings = {
@@ -215,11 +317,24 @@ release_settings.update(
     }
 )
 
+test_overrides = {
+    "GENERATE_INFOPLIST_FILE": "YES",
+    "PRODUCT_BUNDLE_IDENTIFIER": "com.leo.shortslibrary.tests",
+    "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/ShortsLibrary.app/ShortsLibrary",
+    "BUNDLE_LOADER": "$(TEST_HOST)",
+}
+test_debug_settings = dict(debug_settings)
+test_debug_settings.update(test_overrides)
+test_release_settings = dict(release_settings)
+test_release_settings.update(test_overrides)
+
 for config_id, name, settings in [
     (project_debug, "Debug", debug_settings),
     (project_release, "Release", release_settings),
     (target_debug, "Debug", debug_settings),
     (target_release, "Release", release_settings),
+    (test_debug, "Debug", test_debug_settings),
+    (test_release, "Release", test_release_settings),
 ]:
     add(config_id, isa="XCBuildConfiguration", buildSettings=settings, name=name)
 
@@ -234,6 +349,14 @@ add(
     target_cfg_list,
     isa="XCConfigurationList",
     buildConfigurations=[target_debug, target_release],
+    defaultConfigurationIsVisible="0",
+    defaultConfigurationName="Release",
+)
+
+add(
+    test_cfg_list,
+    isa="XCConfigurationList",
+    buildConfigurations=[test_debug, test_release],
     defaultConfigurationIsVisible="0",
     defaultConfigurationName="Release",
 )
@@ -260,7 +383,7 @@ add(
     productRefGroup=products_group,
     projectDirPath="",
     projectRoot="",
-    targets=[target_id],
+    targets=[target_id, test_target_id],
 )
 
 project = {
@@ -285,5 +408,41 @@ WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
     '</Workspace>\n',
     encoding="utf-8",
 )
+
+SCHEMES_DIR = PROJECT_DIR / "xcshareddata" / "xcschemes"
+SCHEMES_DIR.mkdir(parents=True, exist_ok=True)
+test_reference = (
+    f'<BuildableReference BuildableIdentifier="primary" '
+    f'BlueprintIdentifier="{test_target_id}" '
+    f'BuildableName="ShortsLibraryTests.xctest" '
+    f'BlueprintName="ShortsLibraryTests" '
+    f'ReferencedContainer="container:ShortsLibrary.xcodeproj">'
+    f'</BuildableReference>'
+)
+scheme_text = f'''<?xml version="1.0" encoding="UTF-8"?>
+<Scheme LastUpgradeVersion="2700" version="1.7">
+   <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES">
+      <BuildActionEntries>
+         <BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES">
+            {test_reference}
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES">
+      <Testables>
+         <TestableReference skipped="NO">
+            {test_reference}
+         </TestableReference>
+      </Testables>
+   </TestAction>
+   <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES">
+   </LaunchAction>
+   <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES">
+   </ProfileAction>
+   <AnalyzeAction buildConfiguration="Debug"></AnalyzeAction>
+   <ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"></ArchiveAction>
+</Scheme>
+'''
+(SCHEMES_DIR / "ShortsLibraryTests.xcscheme").write_text(scheme_text, encoding="utf-8")
 
 print(f"Generated {PROJECT_DIR} with {len(swift_files)} Swift files")
