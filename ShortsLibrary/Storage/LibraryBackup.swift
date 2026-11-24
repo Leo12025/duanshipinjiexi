@@ -7,9 +7,26 @@ enum LibraryBackup {
         let descriptor = FetchDescriptor<LibraryItem>(sortBy: [SortDescriptor(\.createdAt)])
         let items = (try? context.fetch(descriptor)) ?? []
 
+        let followAccounts = (try? context.fetch(FetchDescriptor<FollowedAccount>())) ?? []
         let backup = LibraryBackupFile(
             version: 1,
             exportedAt: Date(),
+            accounts: followAccounts.map { account in
+                LibraryBackupAccount(
+                    id: account.id,
+                    platform: account.platform,
+                    platformUserId: account.platformUserId,
+                    secUserId: account.secUserId,
+                    displayName: account.displayName,
+                    remark: account.remark,
+                    groupName: account.groupName,
+                    avatarURLString: account.avatarURLString,
+                    avatarPHash: account.avatarPHash,
+                    source: account.source,
+                    syncedAt: account.syncedAt,
+                    createdAt: account.createdAt
+                )
+            },
             items: items.map { item in
                 LibraryBackupItem(
                     id: item.id,
@@ -42,7 +59,11 @@ enum LibraryBackup {
                             mimeType: file.mimeType,
                             width: file.width,
                             height: file.height,
-                            orderIndex: file.orderIndex
+                            orderIndex: file.orderIndex,
+                            isAnimated: file.isAnimated,
+                            isLongImageSplit: file.isLongImageSplit,
+                            segmentIndex: file.segmentIndex,
+                            segmentCount: file.segmentCount
                         )
                     }
                 )
@@ -123,15 +144,54 @@ enum LibraryBackup {
                     mimeType: savedFile.mimeType,
                     width: savedFile.width,
                     height: savedFile.height,
-                    orderIndex: savedFile.orderIndex
+                    orderIndex: savedFile.orderIndex,
+                    isAnimated: savedFile.isAnimated ?? false,
+                    isLongImageSplit: savedFile.isLongImageSplit ?? false,
+                    segmentIndex: savedFile.segmentIndex,
+                    segmentCount: savedFile.segmentCount
                 )
                 item.files.append(file)
                 context.insert(file)
             }
         }
 
+        var restoredAccounts = 0
+        let existingAccounts = (try? context.fetch(FetchDescriptor<FollowedAccount>())) ?? []
+        var accountsByKey: [String: FollowedAccount] = [:]
+        for account in existingAccounts {
+            accountsByKey[key(source: account.platform, sourceId: account.platformUserId)] = account
+        }
+        for saved in backup.accounts ?? [] {
+            let account: FollowedAccount
+            if let existing = accountsByKey[key(source: saved.platform, sourceId: saved.platformUserId)] {
+                account = existing
+            } else {
+                account = FollowedAccount(
+                    platform: MediaSource(rawValue: saved.platform) ?? .douyin,
+                    platformUserId: saved.platformUserId,
+                    secUserId: saved.secUserId,
+                    displayName: saved.displayName,
+                    remark: saved.remark,
+                    groupName: saved.groupName,
+                    avatarURLString: saved.avatarURLString,
+                    source: FollowSource(rawValue: saved.source) ?? .manual
+                )
+                account.id = saved.id
+                context.insert(account)
+                restoredAccounts += 1
+            }
+            account.secUserId = saved.secUserId
+            account.displayName = saved.displayName
+            account.remark = saved.remark
+            account.groupName = saved.groupName
+            account.avatarURLString = saved.avatarURLString
+            account.avatarPHash = saved.avatarPHash
+            account.syncedAt = saved.syncedAt
+            account.createdAt = saved.createdAt
+        }
+
         try context.save()
-        return backup.items.count
+        return backup.items.count + restoredAccounts
     }
 
     private static func key(source: String, sourceId: String) -> String {
@@ -142,7 +202,23 @@ enum LibraryBackup {
 private struct LibraryBackupFile: Codable {
     let version: Int
     let exportedAt: Date
+    let accounts: [LibraryBackupAccount]?
     let items: [LibraryBackupItem]
+}
+
+private struct LibraryBackupAccount: Codable {
+    let id: UUID
+    let platform: String
+    let platformUserId: String
+    let secUserId: String?
+    let displayName: String
+    let remark: String?
+    let groupName: String?
+    let avatarURLString: String?
+    let avatarPHash: String?
+    let source: String
+    let syncedAt: Date
+    let createdAt: Date
 }
 
 private struct LibraryBackupItem: Codable {
@@ -179,4 +255,8 @@ private struct LibraryBackupMediaFile: Codable {
     let width: Int?
     let height: Int?
     let orderIndex: Int
+    let isAnimated: Bool?
+    let isLongImageSplit: Bool?
+    let segmentIndex: Int?
+    let segmentCount: Int?
 }

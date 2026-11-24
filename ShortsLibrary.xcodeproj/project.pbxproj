@@ -33,6 +33,16 @@
       "isa": "PBXBuildFile",
       "fileRef": "5B3EEECD1F0079D0E61309F8"
     },
+    "2873E7B77D08B5115EC769EC": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Models/FollowedAccount.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "446086C648A88656EB508918": {
+      "isa": "PBXBuildFile",
+      "fileRef": "2873E7B77D08B5115EC769EC"
+    },
     "144CF8B00234AD111E8EDA26": {
       "isa": "PBXFileReference",
       "lastKnownFileType": "sourcecode.swift",
@@ -62,6 +72,26 @@
     "29C9F96A4F69B6A9E66D361A": {
       "isa": "PBXBuildFile",
       "fileRef": "9EFE260C15C0BE2B2CAFAA3A"
+    },
+    "F333FF32DAE59B5C03FCEF9E": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Networking/FollowListService.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "866D3BA6E49DE12F8A08979B": {
+      "isa": "PBXBuildFile",
+      "fileRef": "F333FF32DAE59B5C03FCEF9E"
+    },
+    "794478943DEA7FA68F3C387B": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Networking/FollowPageCollector.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "3C6574AC7BE4E8D47BFF3435": {
+      "isa": "PBXBuildFile",
+      "fileRef": "794478943DEA7FA68F3C387B"
     },
     "D9C5601B86F968081804ECD2": {
       "isa": "PBXFileReference",
@@ -253,6 +283,16 @@
       "isa": "PBXBuildFile",
       "fileRef": "C3653202FAF55CAC2112C5C3"
     },
+    "20C13F9A292A8D94BEE7A192": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Storage/FollowListRepository.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "311B3A78A2435FBB87A3A197": {
+      "isa": "PBXBuildFile",
+      "fileRef": "20C13F9A292A8D94BEE7A192"
+    },
     "6F01AB614A32B36EF7B1CC67": {
       "isa": "PBXFileReference",
       "lastKnownFileType": "sourcecode.swift",
@@ -333,6 +373,16 @@
       "isa": "PBXBuildFile",
       "fileRef": "F63C52F055AF49853F0396D7"
     },
+    "C9CAD0C9797CC198E4959D85": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/FollowListView.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "87717E25C8F76782136DE230": {
+      "isa": "PBXBuildFile",
+      "fileRef": "C9CAD0C9797CC198E4959D85"
+    },
     "90D951ABA4F4F813C49D3B60": {
       "isa": "PBXFileReference",
       "lastKnownFileType": "sourcecode.swift",
@@ -402,6 +452,26 @@
     "70354230E2C0413F7A44E4A8": {
       "isa": "PBXBuildFile",
       "fileRef": "4108639EF0D6A1A6413A0894"
+    },
+    "06A37AAB3BC40707555ED7A3": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Utilities/FollowSimilarity.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "2C599EB9944FFC0C1D9BB0C3": {
+      "isa": "PBXBuildFile",
+      "fileRef": "06A37AAB3BC40707555ED7A3"
+    },
+    "6EC3FE05BFEF3EEDA70BDF8F": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Utilities/ImageFileProcessor.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "59A04076F8CF2BF45D6EE236": {
+      "isa": "PBXBuildFile",
+      "fileRef": "6EC3FE05BFEF3EEDA70BDF8F"
     },
     "066B64DD0F7D20ADAFCD1F2F": {
       "isa": "PBXFileReference",
@@ -503,9 +573,12 @@
         "76DEA004C242328B6F2ADF9C",
         "58484B90CD1958B689061543",
         "5B3EEECD1F0079D0E61309F8",
+        "2873E7B77D08B5115EC769EC",
         "144CF8B00234AD111E8EDA26",
         "25FD2047A4FF363343220215",
         "9EFE260C15C0BE2B2CAFAA3A",
+        "F333FF32DAE59B5C03FCEF9E",
+        "794478943DEA7FA68F3C387B",
         "D9C5601B86F968081804ECD2",
         "D38CA14A1356B24E13521DA7",
         "611D32D12BF1EC8F1160F43C",
@@ -525,6 +598,7 @@
         "D22D264FD63375C5D40D8B20",
         "4E617357EB095C3592E74094",
         "C3653202FAF55CAC2112C5C3",
+        "20C13F9A292A8D94BEE7A192",
         "6F01AB614A32B36EF7B1CC67",
         "AAC0C0A36BBA51513B09E3FF",
         "951439357FF214D2E5D04ECD",
@@ -533,6 +607,7 @@
         "FCF999A09852767692223060",
         "B0DCE95B817FC04EE0FDCE6D",
         "F63C52F055AF49853F0396D7",
+        "C9CAD0C9797CC198E4959D85",
         "90D951ABA4F4F813C49D3B60",
         "0FC815F1D2E048616CD2A38F",
         "8D85FDE210C2DF2042EE547C",
@@ -540,6 +615,8 @@
         "962091576A9FE9AD4F3821BE",
         "ADB6A9C5C6763C0DEE7E8EFF",
         "4108639EF0D6A1A6413A0894",
+        "06A37AAB3BC40707555ED7A3",
+        "6EC3FE05BFEF3EEDA70BDF8F",
         "066B64DD0F7D20ADAFCD1F2F",
         "BADBECFF38C6680B8965776A",
         "231B2B26D63263BD93235088",
@@ -579,9 +656,12 @@
         "FC6EFF4EDBE10BAFE3EFADFC",
         "33FE3497FE315483A8BC9647",
         "8119E779121B3C5E1488BB72",
+        "446086C648A88656EB508918",
         "6BD3F677F55A3365F62B3A5C",
         "B28D872A1593B194B999B890",
         "29C9F96A4F69B6A9E66D361A",
+        "866D3BA6E49DE12F8A08979B",
+        "3C6574AC7BE4E8D47BFF3435",
         "A613E859AF5630DE16CFC9BF",
         "85BB827C35D398D29BB8809C",
         "ED5C2E9DC80844F4431F6A37",
@@ -601,6 +681,7 @@
         "E8AF96630BD6715703262341",
         "F61DEF4DAA5D380D16D61CAC",
         "1B61A4179EFC4033295F0198",
+        "311B3A78A2435FBB87A3A197",
         "2939AF1A0E10A27B4A9620AC",
         "9F81B3C6B6F4832A123CC559",
         "ED323AC77C1555B5EB8B9E6A",
@@ -609,6 +690,7 @@
         "D998C221951A5947ACA52096",
         "D00791CFC2726EBE237BE3FD",
         "DAC3F1753043F88270BC3F6B",
+        "87717E25C8F76782136DE230",
         "91D9E52AC01B3089A00769C5",
         "0B1ACA98FACE7A02758FF711",
         "55A0ABE6530940AD75D142E3",
@@ -616,6 +698,8 @@
         "972FA95F40212A8DB53CE019",
         "FA451444C066A86C441733BB",
         "70354230E2C0413F7A44E4A8",
+        "2C599EB9944FFC0C1D9BB0C3",
+        "59A04076F8CF2BF45D6EE236",
         "53921345A3B2558F368F6BCE",
         "82CF1085EBAE21D9D534BBBB"
       ],
