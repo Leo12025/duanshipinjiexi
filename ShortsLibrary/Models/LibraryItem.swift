@@ -87,8 +87,16 @@ final class LibraryItem {
 
     var imageFiles: [MediaFile] {
         files
-            .filter { $0.role == FileRole.image.rawValue }
+            .filter { [FileRole.image.rawValue, FileRole.imageSegment.rawValue].contains($0.role) }
             .sorted { $0.orderIndex < $1.orderIndex }
+    }
+
+    var imageOriginalFiles: [MediaFile] {
+        files.filter { $0.role == FileRole.imageOriginal.rawValue }
+    }
+
+    var animatedImageFiles: [MediaFile] {
+        imageFiles.filter { $0.isAnimated }
     }
 
     var needsRetry: Bool {

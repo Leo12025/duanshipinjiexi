@@ -247,7 +247,7 @@ enum HTMLMetadataExtractor {
     private static func isImageURL(_ url: URL) -> Bool {
         let ext = url.pathExtension.lowercased()
         let host = url.host()?.lowercased() ?? ""
-        return ["jpg", "jpeg", "png", "webp", "heic"].contains(ext)
+        return ["jpg", "jpeg", "png", "apng", "gif", "webp", "heic"].contains(ext)
             || host.contains("xhscdn")
             || host.contains("hdslb")
     }

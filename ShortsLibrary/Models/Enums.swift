@@ -42,6 +42,8 @@ enum FileRole: String {
     case video
     case audio
     case image
+    case imageSegment
+    case imageOriginal
     case cover
     case thumbnail
 }

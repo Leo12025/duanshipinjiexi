@@ -143,11 +143,11 @@ struct ItemDetailView: View {
                 .frame(height: 120)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if [.image, .imageText, .dynamic].contains(item.kindEnum), !item.imageFiles.isEmpty {
-            ImageViewerView(urls: item.imageFiles.filter { $0.existsOnDisk }.map(\.fileURL))
+            ImageViewerView(files: item.imageFiles.filter { $0.existsOnDisk })
                 .frame(height: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let cover = item.coverFile, cover.existsOnDisk {
-            LocalImageView(url: cover.fileURL)
+            LocalImageView(url: cover.fileURL, animated: cover.isAnimated)
                 .frame(maxHeight: 300)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {

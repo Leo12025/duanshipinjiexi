@@ -25,16 +25,14 @@ enum MediaRetryService {
                 url: url,
                 destination: destination,
                 label: "封面 · \(item.title)",
-                onFinish: { _ in
-                    if !item.files.contains(where: { $0.relativePath == relative }) {
-                        LibraryRepository.shared.addFile(
-                            to: item,
-                            relativePath: relative,
-                            role: .cover,
-                            mimeType: "image/jpeg",
-                            in: context
-                        )
-                    }
+                onFinish: { location in
+                    finalizeImage(
+                        at: location,
+                        role: .cover,
+                        orderIndex: 0,
+                        item: item,
+                        context: context
+                    )
                     try? context.save()
                 },
                 onError: markFailure
@@ -125,19 +123,13 @@ enum MediaRetryService {
                     destination: destination,
                     label: "图片 \(index + 1) · \(item.title)",
                     onFinish: { location in
-                        if !item.files.contains(where: { $0.relativePath == relative }) {
-                            let size = imageSize(at: location)
-                            LibraryRepository.shared.addFile(
-                                to: item,
-                                relativePath: relative,
-                                role: .image,
-                                mimeType: mimeType(for: ext),
-                                width: size.width,
-                                height: size.height,
-                                orderIndex: index,
-                                in: context
-                            )
-                        }
+                        finalizeImage(
+                            at: location,
+                            role: .image,
+                            orderIndex: index,
+                            item: item,
+                            context: context
+                        )
                         try? context.save()
                     },
                     onError: markFailure
@@ -191,15 +183,13 @@ enum MediaRetryService {
 
         do {
             try await MediaDownloader.download(url: url, to: destination)
-            if !item.files.contains(where: { $0.relativePath == relative }) {
-                LibraryRepository.shared.addFile(
-                    to: item,
-                    relativePath: relative,
-                    role: .cover,
-                    mimeType: "image/jpeg",
-                    in: context
-                )
-            }
+            finalizeImage(
+                at: destination,
+                role: .cover,
+                orderIndex: 0,
+                item: item,
+                context: context
+            )
         } catch {
             failures.append("封面：\(error.localizedDescription)")
         }
@@ -303,19 +293,13 @@ enum MediaRetryService {
 
             do {
                 try await MediaDownloader.download(url: url, to: destination)
-                if !item.files.contains(where: { $0.relativePath == relative }) {
-                    let size = imageSize(at: destination)
-                    LibraryRepository.shared.addFile(
-                        to: item,
-                        relativePath: relative,
-                        role: .image,
-                        mimeType: mimeType(for: ext),
-                        width: size.width,
-                        height: size.height,
-                        orderIndex: index,
-                        in: context
-                    )
-                }
+                finalizeImage(
+                    at: destination,
+                    role: .image,
+                    orderIndex: index,
+                    item: item,
+                    context: context
+                )
             } catch {
                 failures.append("图片 \(index + 1)：\(error.localizedDescription)")
             }
@@ -358,17 +342,84 @@ enum MediaRetryService {
         }
     }
 
-    private static func imageSize(at url: URL) -> (width: Int?, height: Int?) {
-        guard let image = UIImage(contentsOfFile: url.path) else { return (nil, nil) }
-        return (Int(image.size.width), Int(image.size.height))
+    private static func finalizeImage(
+        at location: URL,
+        role: FileRole,
+        orderIndex: Int,
+        item: LibraryItem,
+        context: ModelContext
+    ) {
+        let info = ImageFileProcessor.inspect(at: location)
+        let finalURL = ImageFileProcessor.renameToDetectedFormat(at: location, ext: info.ext)
+        let relative = relativePath(for: finalURL)
+
+        guard !item.files.contains(where: { $0.relativePath == relative }) else { return }
+
+        if role == .cover {
+            LibraryRepository.shared.addFile(
+                to: item,
+                relativePath: relative,
+                role: .cover,
+                mimeType: info.mimeType,
+                width: info.width,
+                height: info.height,
+                orderIndex: orderIndex,
+                isAnimated: info.isAnimated,
+                in: context
+            )
+            return
+        }
+
+        if !info.isAnimated,
+           ImageFileProcessor.isLongImage(width: info.width, height: info.height) {
+            let segments = ImageFileProcessor.splitLongImage(at: finalURL, relativeBase: relative)
+            if !segments.isEmpty {
+                LibraryRepository.shared.addFile(
+                    to: item,
+                    relativePath: relative,
+                    role: .imageOriginal,
+                    mimeType: info.mimeType,
+                    width: info.width,
+                    height: info.height,
+                    orderIndex: orderIndex,
+                    in: context
+                )
+                for (segmentIndex, segment) in segments.enumerated() {
+                    LibraryRepository.shared.addFile(
+                        to: item,
+                        relativePath: segment.relativePath,
+                        role: .imageSegment,
+                        mimeType: "image/jpeg",
+                        width: segment.width,
+                        height: segment.height,
+                        orderIndex: orderIndex * 100 + segmentIndex,
+                        isLongImageSplit: true,
+                        segmentIndex: segmentIndex + 1,
+                        segmentCount: segments.count,
+                        in: context
+                    )
+                }
+                return
+            }
+        }
+
+        LibraryRepository.shared.addFile(
+            to: item,
+            relativePath: relative,
+            role: .image,
+            mimeType: info.mimeType,
+            width: info.width,
+            height: info.height,
+            orderIndex: orderIndex,
+            isAnimated: info.isAnimated,
+            in: context
+        )
     }
 
-    private static func mimeType(for ext: String) -> String {
-        switch ext.lowercased() {
-        case "png": return "image/png"
-        case "webp": return "image/webp"
-        case "heic": return "image/heic"
-        default: return "image/jpeg"
-        }
+    private static func relativePath(for url: URL) -> String {
+        let root = AppPaths.root.standardizedFileURL.path
+        let path = url.standardizedFileURL.path
+        guard path.hasPrefix(root) else { return url.lastPathComponent }
+        return String(path.dropFirst(root.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 }

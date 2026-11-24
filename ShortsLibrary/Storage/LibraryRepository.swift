@@ -79,6 +79,10 @@ final class LibraryRepository {
         width: Int? = nil,
         height: Int? = nil,
         orderIndex: Int = 0,
+        isAnimated: Bool = false,
+        isLongImageSplit: Bool = false,
+        segmentIndex: Int? = nil,
+        segmentCount: Int? = nil,
         in context: ModelContext
     ) -> MediaFile {
         let file = MediaFile(
@@ -87,7 +91,11 @@ final class LibraryRepository {
             mimeType: mimeType,
             width: width,
             height: height,
-            orderIndex: orderIndex
+            orderIndex: orderIndex,
+            isAnimated: isAnimated,
+            isLongImageSplit: isLongImageSplit,
+            segmentIndex: segmentIndex,
+            segmentCount: segmentCount
         )
         item.files.append(file)
         context.insert(file)
