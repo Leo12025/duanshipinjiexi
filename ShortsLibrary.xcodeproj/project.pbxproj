@@ -263,6 +263,16 @@
       "isa": "PBXBuildFile",
       "fileRef": "951439357FF214D2E5D04ECD"
     },
+    "ADE2C93C303B6CB8409DD402": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Storage/LoginSessionManager.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "C3FB9717CC6134BEE909C96B": {
+      "isa": "PBXBuildFile",
+      "fileRef": "ADE2C93C303B6CB8409DD402"
+    },
     "B922E3DA3AFAB436D3EB1E1D": {
       "isa": "PBXFileReference",
       "lastKnownFileType": "sourcecode.swift",
@@ -342,6 +352,16 @@
     "B6E70B0B89091C641A114D57": {
       "isa": "PBXBuildFile",
       "fileRef": "D1A804413685E80F5581BF03"
+    },
+    "962091576A9FE9AD4F3821BE": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/PlatformLoginView.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "972FA95F40212A8DB53CE019": {
+      "isa": "PBXBuildFile",
+      "fileRef": "962091576A9FE9AD4F3821BE"
     },
     "ADB6A9C5C6763C0DEE7E8EFF": {
       "isa": "PBXFileReference",
@@ -443,6 +463,7 @@
         "6F01AB614A32B36EF7B1CC67",
         "AAC0C0A36BBA51513B09E3FF",
         "951439357FF214D2E5D04ECD",
+        "ADE2C93C303B6CB8409DD402",
         "B922E3DA3AFAB436D3EB1E1D",
         "FCF999A09852767692223060",
         "B0DCE95B817FC04EE0FDCE6D",
@@ -451,6 +472,7 @@
         "0FC815F1D2E048616CD2A38F",
         "8D85FDE210C2DF2042EE547C",
         "D1A804413685E80F5581BF03",
+        "962091576A9FE9AD4F3821BE",
         "ADB6A9C5C6763C0DEE7E8EFF",
         "4108639EF0D6A1A6413A0894",
         "066B64DD0F7D20ADAFCD1F2F",
@@ -505,6 +527,7 @@
         "2939AF1A0E10A27B4A9620AC",
         "9F81B3C6B6F4832A123CC559",
         "ED323AC77C1555B5EB8B9E6A",
+        "C3FB9717CC6134BEE909C96B",
         "A354A5A457FD1397D6F0A37F",
         "D998C221951A5947ACA52096",
         "D00791CFC2726EBE237BE3FD",
@@ -513,6 +536,7 @@
         "0B1ACA98FACE7A02758FF711",
         "55A0ABE6530940AD75D142E3",
         "B6E70B0B89091C641A114D57",
+        "972FA95F40212A8DB53CE019",
         "FA451444C066A86C441733BB",
         "70354230E2C0413F7A44E4A8",
         "53921345A3B2558F368F6BCE"
