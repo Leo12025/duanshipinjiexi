@@ -93,6 +93,16 @@
       "isa": "PBXBuildFile",
       "fileRef": "22E4CEDEA09F60EE20D04761"
     },
+    "51F2ED8F0BCB57377DF643BD": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/BilibiliParser.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "C835216393D10B479AAA69FC": {
+      "isa": "PBXBuildFile",
+      "fileRef": "51F2ED8F0BCB57377DF643BD"
+    },
     "4B19E22B271CC2995D005A67": {
       "isa": "PBXFileReference",
       "lastKnownFileType": "sourcecode.swift",
@@ -416,6 +426,7 @@
         "D9C5601B86F968081804ECD2",
         "611D32D12BF1EC8F1160F43C",
         "22E4CEDEA09F60EE20D04761",
+        "51F2ED8F0BCB57377DF643BD",
         "4B19E22B271CC2995D005A67",
         "443BEDD7749C9F74254DB089",
         "7B94F8C7D83CB8D329F7EF42",
@@ -477,6 +488,7 @@
         "A613E859AF5630DE16CFC9BF",
         "ED5C2E9DC80844F4431F6A37",
         "8E0FF11774EB6DB5A3D368F2",
+        "C835216393D10B479AAA69FC",
         "03E3DBE6E1B2F3767F39BA37",
         "3B323E7B927E8AD8A6B1055F",
         "E35FB7E17423898D5E79020A",

@@ -15,21 +15,23 @@ struct DouyinParser: PlatformParser {
         let videos = metadata.videoURLs.map {
             VideoCandidate(url: $0, quality: "公开最高画质", width: nil, height: nil, bitrate: nil)
         }
-        guard !videos.isEmpty else {
+        let images = metadata.imageURLs
+        guard !videos.isEmpty || !images.isEmpty else {
             throw AppError.noMedia
         }
 
         return ParsedMedia(
             source: .douyin,
             sourceId: sourceId,
-            kind: .video,
-            title: metadata.title ?? "抖音视频 \(sourceId)",
+            kind: MediaKindResolver.resolve(videos: videos.count, images: images.count, audios: 0),
+            title: metadata.title ?? "抖音内容 \(sourceId)",
             author: metadata.author,
             caption: metadata.description,
             pageURL: finalURL,
             coverURL: metadata.image,
-            images: [],
-            videos: videos
+            images: images,
+            videos: videos,
+            audioURL: nil
         )
     }
 

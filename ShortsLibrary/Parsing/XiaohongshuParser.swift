@@ -16,7 +16,7 @@ struct XiaohongshuParser: PlatformParser {
             VideoCandidate(url: $0, quality: "公开最高画质", width: nil, height: nil, bitrate: nil)
         }
         let images = metadata.imageURLs
-        let kind: MediaKind = videos.isEmpty ? .imageText : .video
+        let kind = MediaKindResolver.resolve(videos: videos.count, images: images.count, audios: 0)
 
         guard !videos.isEmpty || !images.isEmpty else {
             throw AppError.noMedia
@@ -32,7 +32,8 @@ struct XiaohongshuParser: PlatformParser {
             pageURL: finalURL,
             coverURL: metadata.image ?? images.first,
             images: images,
-            videos: videos
+            videos: videos,
+            audioURL: nil
         )
     }
 

@@ -12,6 +12,16 @@ struct VideoCandidate {
     }
 }
 
+enum MediaKindResolver {
+    static func resolve(videos: Int, images: Int, audios: Int, isDynamic: Bool = false) -> MediaKind {
+        if videos > 0 { return .video }
+        if audios > 0 { return .audio }
+        if isDynamic { return .dynamic }
+        if images == 1 { return .image }
+        return .imageText
+    }
+}
+
 struct ParsedMedia {
     let source: MediaSource
     let sourceId: String
@@ -23,6 +33,7 @@ struct ParsedMedia {
     let coverURL: URL?
     let images: [URL]
     let videos: [VideoCandidate]
+    let audioURL: URL?
 
     var bestVideo: VideoCandidate? {
         videos.max { lhs, rhs in

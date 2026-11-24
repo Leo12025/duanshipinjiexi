@@ -4,7 +4,8 @@ enum ParserRegistry {
     static let all: [any PlatformParser] = [
         DouyinParser(),
         KuaishouParser(),
-        XiaohongshuParser()
+        XiaohongshuParser(),
+        BilibiliParser()
     ]
 
     static func parser(for url: URL) -> (any PlatformParser)? {

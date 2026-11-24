@@ -7,6 +7,7 @@ struct PageMetadata {
     var image: URL?
     var imageURLs: [URL] = []
     var videoURLs: [URL] = []
+    var audioURLs: [URL] = []
     var finalURL: URL
     var rawHTML: String
 }
@@ -36,6 +37,10 @@ enum HTMLMetadataExtractor {
                 if let url = URL(string: value), !result.videoURLs.contains(url) {
                     result.videoURLs.append(url)
                 }
+            case "og:audio", "twitter:player:stream":
+                if let url = URL(string: value), !result.audioURLs.contains(url) {
+                    result.audioURLs.append(url)
+                }
             case "author", "og:article:author", "article:author":
                 if result.author == nil { result.author = value }
             default:
@@ -52,6 +57,18 @@ enum HTMLMetadataExtractor {
         for url in embeddedImageURLs(in: html) where !result.imageURLs.contains(url) {
             result.imageURLs.append(url)
         }
+
+        let dash = bilibiliDashURLs(in: html)
+        for url in dash.video where !result.videoURLs.contains(url) {
+            result.videoURLs.append(url)
+        }
+        for url in dash.audio where !result.audioURLs.contains(url) {
+            result.audioURLs.append(url)
+        }
+        for url in embeddedAudioURLs(in: html) where !result.audioURLs.contains(url) {
+            result.audioURLs.append(url)
+        }
+
         if result.image == nil, let first = result.imageURLs.first {
             result.image = first
         }
@@ -142,7 +159,9 @@ enum HTMLMetadataExtractor {
         let patterns = [
             #""imageList"\s*:\s*\[(.*?)\]"#,
             #""images"\s*:\s*\[(.*?)\]"#,
-            #""image"\s*:\s*\[(.*?)\]"#
+            #""image"\s*:\s*\[(.*?)\]"#,
+            #""pictures"\s*:\s*\[(.*?)\]"#,
+            #""image_urls"\s*:\s*\[(.*?)\]"#
         ]
 
         for pattern in patterns {
@@ -152,6 +171,40 @@ enum HTMLMetadataExtractor {
                     urls.append(url)
                 }
             }
+        }
+        return urls
+    }
+
+    private static func bilibiliDashURLs(in html: String) -> (video: [URL], audio: [URL]) {
+        func urls(for key: String) -> [URL] {
+            let pattern = #""\#(key)"\s*:\s*\[\s*\{[\s\S]{0,3000}?"baseUrl"\s*:\s*"((?:[^"\\]|\\.)*)""#
+            return capture(pattern: pattern, in: html, options: [.dotMatchesLineSeparators])
+                .compactMap { group in
+                    guard let raw = group.dropFirst().first else { return nil }
+                    return URL(string: cleanedURLString(raw))
+                }
+        }
+        return (urls(for: "video"), urls(for: "audio"))
+    }
+
+    private static func embeddedAudioURLs(in html: String) -> [URL] {
+        var urls: [URL] = []
+        let patterns = [
+            #""audioUrl"\s*:\s*"((?:[^"\\]|\\.)*)""#,
+            #""audio_url"\s*:\s*"((?:[^"\\]|\\.)*)""#
+        ]
+
+        for pattern in patterns {
+            for group in capture(pattern: pattern, in: html) {
+                guard let raw = group.dropFirst().first else { continue }
+                if let url = URL(string: cleanedURLString(raw)), isAudioURL(url), !urls.contains(url) {
+                    urls.append(url)
+                }
+            }
+        }
+
+        for url in quotedURLs(in: html) where isAudioURL(url) && !urls.contains(url) {
+            urls.append(url)
         }
         return urls
     }
@@ -172,13 +225,28 @@ enum HTMLMetadataExtractor {
     private static func isVideoURL(_ url: URL) -> Bool {
         let path = url.path.lowercased()
         let ext = url.pathExtension.lowercased()
-        return ["mp4", "m3u8", "mov"].contains(ext) || path.contains("video")
+        let host = url.host()?.lowercased() ?? ""
+        if ["m4a", "mp3", "wav", "aac", "flac"].contains(ext) { return false }
+        return ["mp4", "m3u8", "mov"].contains(ext)
+            || path.contains("video")
+            || host.contains("bilivideo")
+    }
+
+    private static func isAudioURL(_ url: URL) -> Bool {
+        let path = url.path.lowercased()
+        let ext = url.pathExtension.lowercased()
+        let host = url.host()?.lowercased() ?? ""
+        return ["m4a", "mp3", "wav", "aac", "flac"].contains(ext)
+            || path.contains("/audio")
+            || host.contains("audio")
     }
 
     private static func isImageURL(_ url: URL) -> Bool {
         let ext = url.pathExtension.lowercased()
+        let host = url.host()?.lowercased() ?? ""
         return ["jpg", "jpeg", "png", "webp", "heic"].contains(ext)
-            || (url.host()?.contains("xhscdn") ?? false)
+            || host.contains("xhscdn")
+            || host.contains("hdslb")
     }
 
     private static func firstCapture(pattern: String, in text: String) -> String? {
