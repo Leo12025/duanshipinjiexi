@@ -1,0 +1,734 @@
+{
+  "archiveVersion": "1",
+  "classes": {},
+  "objectVersion": "56",
+  "objects": {
+    "76DEA004C242328B6F2ADF9C": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/AppDelegate.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "FC6EFF4EDBE10BAFE3EFADFC": {
+      "isa": "PBXBuildFile",
+      "fileRef": "76DEA004C242328B6F2ADF9C"
+    },
+    "58484B90CD1958B689061543": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Models/DownloadJob.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "33FE3497FE315483A8BC9647": {
+      "isa": "PBXBuildFile",
+      "fileRef": "58484B90CD1958B689061543"
+    },
+    "5B3EEECD1F0079D0E61309F8": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Models/Enums.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "8119E779121B3C5E1488BB72": {
+      "isa": "PBXBuildFile",
+      "fileRef": "5B3EEECD1F0079D0E61309F8"
+    },
+    "144CF8B00234AD111E8EDA26": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Models/LibraryItem.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "6BD3F677F55A3365F62B3A5C": {
+      "isa": "PBXBuildFile",
+      "fileRef": "144CF8B00234AD111E8EDA26"
+    },
+    "25FD2047A4FF363343220215": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Models/MediaFile.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "B28D872A1593B194B999B890": {
+      "isa": "PBXBuildFile",
+      "fileRef": "25FD2047A4FF363343220215"
+    },
+    "9EFE260C15C0BE2B2CAFAA3A": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Networking/DownloadManager.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "29C9F96A4F69B6A9E66D361A": {
+      "isa": "PBXBuildFile",
+      "fileRef": "9EFE260C15C0BE2B2CAFAA3A"
+    },
+    "D9C5601B86F968081804ECD2": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Networking/MediaDownloader.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "A613E859AF5630DE16CFC9BF": {
+      "isa": "PBXBuildFile",
+      "fileRef": "D9C5601B86F968081804ECD2"
+    },
+    "611D32D12BF1EC8F1160F43C": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Networking/NetworkClient.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "ED5C2E9DC80844F4431F6A37": {
+      "isa": "PBXBuildFile",
+      "fileRef": "611D32D12BF1EC8F1160F43C"
+    },
+    "22E4CEDEA09F60EE20D04761": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Networking/NetworkMonitor.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "8E0FF11774EB6DB5A3D368F2": {
+      "isa": "PBXBuildFile",
+      "fileRef": "22E4CEDEA09F60EE20D04761"
+    },
+    "4B19E22B271CC2995D005A67": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/DouyinParser.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "03E3DBE6E1B2F3767F39BA37": {
+      "isa": "PBXBuildFile",
+      "fileRef": "4B19E22B271CC2995D005A67"
+    },
+    "443BEDD7749C9F74254DB089": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/HTMLMetadataExtractor.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "3B323E7B927E8AD8A6B1055F": {
+      "isa": "PBXBuildFile",
+      "fileRef": "443BEDD7749C9F74254DB089"
+    },
+    "7B94F8C7D83CB8D329F7EF42": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/KuaishouParser.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "E35FB7E17423898D5E79020A": {
+      "isa": "PBXBuildFile",
+      "fileRef": "7B94F8C7D83CB8D329F7EF42"
+    },
+    "F835DF33A4F9D85FEA5294C1": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/LinkExtractor.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "53EEFDFF211D060E882FCE0B": {
+      "isa": "PBXBuildFile",
+      "fileRef": "F835DF33A4F9D85FEA5294C1"
+    },
+    "38CC249F328135E9F9DCAF7F": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/ParsedMedia.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "CAB72E185CF3A5A5A2765715": {
+      "isa": "PBXBuildFile",
+      "fileRef": "38CC249F328135E9F9DCAF7F"
+    },
+    "07C99167DBC81754CBF8EAA9": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/ParserRegistry.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "3A82DC4269B3B772EF6E37D8": {
+      "isa": "PBXBuildFile",
+      "fileRef": "07C99167DBC81754CBF8EAA9"
+    },
+    "3EB0B0E34C09D58325BF4641": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/PlatformParser.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "8C34E06FE0619FC203B1CE65": {
+      "isa": "PBXBuildFile",
+      "fileRef": "3EB0B0E34C09D58325BF4641"
+    },
+    "51B5DA6E247BD4042705B61D": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/PublicPageLoader.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "69B59DD02AD7829B71EE42E0": {
+      "isa": "PBXBuildFile",
+      "fileRef": "51B5DA6E247BD4042705B61D"
+    },
+    "CF14FBA43ADE2E698F1C1B4B": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/WebViewPageLoader.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "6DB038BF53440836D2E08FE0": {
+      "isa": "PBXBuildFile",
+      "fileRef": "CF14FBA43ADE2E698F1C1B4B"
+    },
+    "1A52AC526FC303325862A5B4": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Parsing/XiaohongshuParser.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "A0E568706199D742CE2A00FF": {
+      "isa": "PBXBuildFile",
+      "fileRef": "1A52AC526FC303325862A5B4"
+    },
+    "D22D264FD63375C5D40D8B20": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/ShortsLibraryApp.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "E8AF96630BD6715703262341": {
+      "isa": "PBXBuildFile",
+      "fileRef": "D22D264FD63375C5D40D8B20"
+    },
+    "4E617357EB095C3592E74094": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Storage/AppPaths.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "F61DEF4DAA5D380D16D61CAC": {
+      "isa": "PBXBuildFile",
+      "fileRef": "4E617357EB095C3592E74094"
+    },
+    "C3653202FAF55CAC2112C5C3": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Storage/DownloadQueue.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "1B61A4179EFC4033295F0198": {
+      "isa": "PBXBuildFile",
+      "fileRef": "C3653202FAF55CAC2112C5C3"
+    },
+    "6F01AB614A32B36EF7B1CC67": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Storage/LibraryBackup.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "2939AF1A0E10A27B4A9620AC": {
+      "isa": "PBXBuildFile",
+      "fileRef": "6F01AB614A32B36EF7B1CC67"
+    },
+    "AAC0C0A36BBA51513B09E3FF": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Storage/LibraryRepository.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "9F81B3C6B6F4832A123CC559": {
+      "isa": "PBXBuildFile",
+      "fileRef": "AAC0C0A36BBA51513B09E3FF"
+    },
+    "951439357FF214D2E5D04ECD": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Storage/LinkIngestService.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "ED323AC77C1555B5EB8B9E6A": {
+      "isa": "PBXBuildFile",
+      "fileRef": "951439357FF214D2E5D04ECD"
+    },
+    "B922E3DA3AFAB436D3EB1E1D": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Storage/MediaRetryService.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "A354A5A457FD1397D6F0A37F": {
+      "isa": "PBXBuildFile",
+      "fileRef": "B922E3DA3AFAB436D3EB1E1D"
+    },
+    "FCF999A09852767692223060": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/ActivityView.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "D998C221951A5947ACA52096": {
+      "isa": "PBXBuildFile",
+      "fileRef": "FCF999A09852767692223060"
+    },
+    "B0DCE95B817FC04EE0FDCE6D": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/AddLinkView.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "D00791CFC2726EBE237BE3FD": {
+      "isa": "PBXBuildFile",
+      "fileRef": "B0DCE95B817FC04EE0FDCE6D"
+    },
+    "F63C52F055AF49853F0396D7": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/DownloadQueueView.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "DAC3F1753043F88270BC3F6B": {
+      "isa": "PBXBuildFile",
+      "fileRef": "F63C52F055AF49853F0396D7"
+    },
+    "90D951ABA4F4F813C49D3B60": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/ItemDetailView.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "91D9E52AC01B3089A00769C5": {
+      "isa": "PBXBuildFile",
+      "fileRef": "90D951ABA4F4F813C49D3B60"
+    },
+    "0FC815F1D2E048616CD2A38F": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/LibraryListView.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "0B1ACA98FACE7A02758FF711": {
+      "isa": "PBXBuildFile",
+      "fileRef": "0FC815F1D2E048616CD2A38F"
+    },
+    "8D85FDE210C2DF2042EE547C": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/MediaViews.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "55A0ABE6530940AD75D142E3": {
+      "isa": "PBXBuildFile",
+      "fileRef": "8D85FDE210C2DF2042EE547C"
+    },
+    "D1A804413685E80F5581BF03": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/PhotoSaver.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "B6E70B0B89091C641A114D57": {
+      "isa": "PBXBuildFile",
+      "fileRef": "D1A804413685E80F5581BF03"
+    },
+    "ADB6A9C5C6763C0DEE7E8EFF": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/UI/RootView.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "FA451444C066A86C441733BB": {
+      "isa": "PBXBuildFile",
+      "fileRef": "ADB6A9C5C6763C0DEE7E8EFF"
+    },
+    "4108639EF0D6A1A6413A0894": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Utilities/AppError.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "70354230E2C0413F7A44E4A8": {
+      "isa": "PBXBuildFile",
+      "fileRef": "4108639EF0D6A1A6413A0894"
+    },
+    "066B64DD0F7D20ADAFCD1F2F": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "ShortsLibrary/Utilities/NotificationService.swift",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "53921345A3B2558F368F6BCE": {
+      "isa": "PBXBuildFile",
+      "fileRef": "066B64DD0F7D20ADAFCD1F2F"
+    },
+    "231B2B26D63263BD93235088": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "folder.assetcatalog",
+      "path": "ShortsLibrary/Assets.xcassets",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "5A9A93CF823E0E48CF85992E": {
+      "isa": "PBXBuildFile",
+      "fileRef": "231B2B26D63263BD93235088"
+    },
+    "9F0455446AF55E153B336F1F": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "text.plist.xml",
+      "path": "ShortsLibrary/PrivacyInfo.xcprivacy",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "C18B657FAFC067411694030B": {
+      "isa": "PBXBuildFile",
+      "fileRef": "9F0455446AF55E153B336F1F"
+    },
+    "D08E7FD3E6D93C3946A4B9A9": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "text.plist.xml",
+      "path": "ShortsLibrary/Info.plist",
+      "sourceTree": "SOURCE_ROOT"
+    },
+    "BE45210D12E16CFEBEAE763B": {
+      "isa": "PBXFileReference",
+      "explicitFileType": "wrapper.application",
+      "includeInIndex": "0",
+      "path": "ShortsLibrary.app",
+      "sourceTree": "BUILT_PRODUCTS_DIR"
+    },
+    "D68D87E73FD7CA67BB8C99BE": {
+      "isa": "PBXGroup",
+      "children": [
+        "950C8B43FC645930F760EC7B",
+        "74E873CC8E059A15F9F0F72E"
+      ],
+      "sourceTree": "<group>"
+    },
+    "950C8B43FC645930F760EC7B": {
+      "isa": "PBXGroup",
+      "children": [
+        "76DEA004C242328B6F2ADF9C",
+        "58484B90CD1958B689061543",
+        "5B3EEECD1F0079D0E61309F8",
+        "144CF8B00234AD111E8EDA26",
+        "25FD2047A4FF363343220215",
+        "9EFE260C15C0BE2B2CAFAA3A",
+        "D9C5601B86F968081804ECD2",
+        "611D32D12BF1EC8F1160F43C",
+        "22E4CEDEA09F60EE20D04761",
+        "4B19E22B271CC2995D005A67",
+        "443BEDD7749C9F74254DB089",
+        "7B94F8C7D83CB8D329F7EF42",
+        "F835DF33A4F9D85FEA5294C1",
+        "38CC249F328135E9F9DCAF7F",
+        "07C99167DBC81754CBF8EAA9",
+        "3EB0B0E34C09D58325BF4641",
+        "51B5DA6E247BD4042705B61D",
+        "CF14FBA43ADE2E698F1C1B4B",
+        "1A52AC526FC303325862A5B4",
+        "D22D264FD63375C5D40D8B20",
+        "4E617357EB095C3592E74094",
+        "C3653202FAF55CAC2112C5C3",
+        "6F01AB614A32B36EF7B1CC67",
+        "AAC0C0A36BBA51513B09E3FF",
+        "951439357FF214D2E5D04ECD",
+        "B922E3DA3AFAB436D3EB1E1D",
+        "FCF999A09852767692223060",
+        "B0DCE95B817FC04EE0FDCE6D",
+        "F63C52F055AF49853F0396D7",
+        "90D951ABA4F4F813C49D3B60",
+        "0FC815F1D2E048616CD2A38F",
+        "8D85FDE210C2DF2042EE547C",
+        "D1A804413685E80F5581BF03",
+        "ADB6A9C5C6763C0DEE7E8EFF",
+        "4108639EF0D6A1A6413A0894",
+        "066B64DD0F7D20ADAFCD1F2F",
+        "231B2B26D63263BD93235088",
+        "9F0455446AF55E153B336F1F",
+        "D08E7FD3E6D93C3946A4B9A9"
+      ],
+      "name": "Sources",
+      "sourceTree": "<group>"
+    },
+    "74E873CC8E059A15F9F0F72E": {
+      "isa": "PBXGroup",
+      "children": [
+        "BE45210D12E16CFEBEAE763B"
+      ],
+      "name": "Products",
+      "sourceTree": "<group>"
+    },
+    "CF5BDB0BEAFE176F9629192A": {
+      "isa": "PBXFrameworksBuildPhase",
+      "buildActionMask": "2147483647",
+      "files": [],
+      "runOnlyForDeploymentPostprocessing": "0"
+    },
+    "1CDF2F71A52B082132B04DFF": {
+      "isa": "PBXSourcesBuildPhase",
+      "buildActionMask": "2147483647",
+      "files": [
+        "FC6EFF4EDBE10BAFE3EFADFC",
+        "33FE3497FE315483A8BC9647",
+        "8119E779121B3C5E1488BB72",
+        "6BD3F677F55A3365F62B3A5C",
+        "B28D872A1593B194B999B890",
+        "29C9F96A4F69B6A9E66D361A",
+        "A613E859AF5630DE16CFC9BF",
+        "ED5C2E9DC80844F4431F6A37",
+        "8E0FF11774EB6DB5A3D368F2",
+        "03E3DBE6E1B2F3767F39BA37",
+        "3B323E7B927E8AD8A6B1055F",
+        "E35FB7E17423898D5E79020A",
+        "53EEFDFF211D060E882FCE0B",
+        "CAB72E185CF3A5A5A2765715",
+        "3A82DC4269B3B772EF6E37D8",
+        "8C34E06FE0619FC203B1CE65",
+        "69B59DD02AD7829B71EE42E0",
+        "6DB038BF53440836D2E08FE0",
+        "A0E568706199D742CE2A00FF",
+        "E8AF96630BD6715703262341",
+        "F61DEF4DAA5D380D16D61CAC",
+        "1B61A4179EFC4033295F0198",
+        "2939AF1A0E10A27B4A9620AC",
+        "9F81B3C6B6F4832A123CC559",
+        "ED323AC77C1555B5EB8B9E6A",
+        "A354A5A457FD1397D6F0A37F",
+        "D998C221951A5947ACA52096",
+        "D00791CFC2726EBE237BE3FD",
+        "DAC3F1753043F88270BC3F6B",
+        "91D9E52AC01B3089A00769C5",
+        "0B1ACA98FACE7A02758FF711",
+        "55A0ABE6530940AD75D142E3",
+        "B6E70B0B89091C641A114D57",
+        "FA451444C066A86C441733BB",
+        "70354230E2C0413F7A44E4A8",
+        "53921345A3B2558F368F6BCE"
+      ],
+      "runOnlyForDeploymentPostprocessing": "0"
+    },
+    "C02F1309AF4906C92F1EAD44": {
+      "isa": "PBXResourcesBuildPhase",
+      "buildActionMask": "2147483647",
+      "files": [
+        "5A9A93CF823E0E48CF85992E",
+        "C18B657FAFC067411694030B"
+      ],
+      "runOnlyForDeploymentPostprocessing": "0"
+    },
+    "BF17474B2E0B17438DC2176A": {
+      "isa": "PBXNativeTarget",
+      "buildConfigurationList": "7ADE71700E9404B10E13B577",
+      "buildPhases": [
+        "1CDF2F71A52B082132B04DFF",
+        "CF5BDB0BEAFE176F9629192A",
+        "C02F1309AF4906C92F1EAD44"
+      ],
+      "buildRules": [],
+      "dependencies": [],
+      "name": "ShortsLibrary",
+      "productName": "ShortsLibrary",
+      "productReference": "BE45210D12E16CFEBEAE763B",
+      "productType": "com.apple.product-type.application"
+    },
+    "40BC6E4EC777C35CD827CBB6": {
+      "isa": "XCBuildConfiguration",
+      "buildSettings": {
+        "ALWAYS_SEARCH_USER_PATHS": "NO",
+        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+        "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
+        "CLANG_ENABLE_MODULES": "YES",
+        "CLANG_ENABLE_OBJC_ARC": "YES",
+        "CODE_SIGN_STYLE": "Automatic",
+        "CURRENT_PROJECT_VERSION": "1",
+        "DEVELOPMENT_TEAM": "",
+        "ENABLE_PREVIEWS": "YES",
+        "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+        "GENERATE_INFOPLIST_FILE": "NO",
+        "INFOPLIST_FILE": "ShortsLibrary/Info.plist",
+        "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
+        "LD_RUNPATH_SEARCH_PATHS": [
+          "$(inherited)",
+          "@executable_path/Frameworks"
+        ],
+        "MARKETING_VERSION": "1.0",
+        "PRODUCT_BUNDLE_IDENTIFIER": "com.leo.shortslibrary",
+        "PRODUCT_NAME": "$(TARGET_NAME)",
+        "SDKROOT": "iphoneos",
+        "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
+        "SWIFT_EMIT_LOC_STRINGS": "YES",
+        "SWIFT_VERSION": "5.0",
+        "TARGETED_DEVICE_FAMILY": "1,2",
+        "DEBUG_INFORMATION_FORMAT": "dwarf",
+        "ENABLE_TESTABILITY": "YES",
+        "GCC_OPTIMIZATION_LEVEL": "0",
+        "MTL_ENABLE_DEBUG_INFO": "INCLUDE_SOURCE",
+        "ONLY_ACTIVE_ARCH": "YES",
+        "SWIFT_ACTIVE_COMPILATION_CONDITIONS": "DEBUG",
+        "SWIFT_OPTIMIZATION_LEVEL": "-Onone"
+      },
+      "name": "Debug"
+    },
+    "2FC9CCE37C139D977277E3A9": {
+      "isa": "XCBuildConfiguration",
+      "buildSettings": {
+        "ALWAYS_SEARCH_USER_PATHS": "NO",
+        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+        "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
+        "CLANG_ENABLE_MODULES": "YES",
+        "CLANG_ENABLE_OBJC_ARC": "YES",
+        "CODE_SIGN_STYLE": "Automatic",
+        "CURRENT_PROJECT_VERSION": "1",
+        "DEVELOPMENT_TEAM": "",
+        "ENABLE_PREVIEWS": "YES",
+        "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+        "GENERATE_INFOPLIST_FILE": "NO",
+        "INFOPLIST_FILE": "ShortsLibrary/Info.plist",
+        "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
+        "LD_RUNPATH_SEARCH_PATHS": [
+          "$(inherited)",
+          "@executable_path/Frameworks"
+        ],
+        "MARKETING_VERSION": "1.0",
+        "PRODUCT_BUNDLE_IDENTIFIER": "com.leo.shortslibrary",
+        "PRODUCT_NAME": "$(TARGET_NAME)",
+        "SDKROOT": "iphoneos",
+        "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
+        "SWIFT_EMIT_LOC_STRINGS": "YES",
+        "SWIFT_VERSION": "5.0",
+        "TARGETED_DEVICE_FAMILY": "1,2",
+        "COPY_PHASE_STRIP": "NO",
+        "DEBUG_INFORMATION_FORMAT": "dwarf-with-dsym",
+        "ENABLE_NS_ASSERTIONS": "NO",
+        "MTL_ENABLE_DEBUG_INFO": "NO",
+        "SWIFT_COMPILATION_MODE": "wholemodule",
+        "SWIFT_OPTIMIZATION_LEVEL": "-O",
+        "VALIDATE_PRODUCT": "YES"
+      },
+      "name": "Release"
+    },
+    "745105746D37935952CF2452": {
+      "isa": "XCBuildConfiguration",
+      "buildSettings": {
+        "ALWAYS_SEARCH_USER_PATHS": "NO",
+        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+        "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
+        "CLANG_ENABLE_MODULES": "YES",
+        "CLANG_ENABLE_OBJC_ARC": "YES",
+        "CODE_SIGN_STYLE": "Automatic",
+        "CURRENT_PROJECT_VERSION": "1",
+        "DEVELOPMENT_TEAM": "",
+        "ENABLE_PREVIEWS": "YES",
+        "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+        "GENERATE_INFOPLIST_FILE": "NO",
+        "INFOPLIST_FILE": "ShortsLibrary/Info.plist",
+        "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
+        "LD_RUNPATH_SEARCH_PATHS": [
+          "$(inherited)",
+          "@executable_path/Frameworks"
+        ],
+        "MARKETING_VERSION": "1.0",
+        "PRODUCT_BUNDLE_IDENTIFIER": "com.leo.shortslibrary",
+        "PRODUCT_NAME": "$(TARGET_NAME)",
+        "SDKROOT": "iphoneos",
+        "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
+        "SWIFT_EMIT_LOC_STRINGS": "YES",
+        "SWIFT_VERSION": "5.0",
+        "TARGETED_DEVICE_FAMILY": "1,2",
+        "DEBUG_INFORMATION_FORMAT": "dwarf",
+        "ENABLE_TESTABILITY": "YES",
+        "GCC_OPTIMIZATION_LEVEL": "0",
+        "MTL_ENABLE_DEBUG_INFO": "INCLUDE_SOURCE",
+        "ONLY_ACTIVE_ARCH": "YES",
+        "SWIFT_ACTIVE_COMPILATION_CONDITIONS": "DEBUG",
+        "SWIFT_OPTIMIZATION_LEVEL": "-Onone"
+      },
+      "name": "Debug"
+    },
+    "57F11DAE29C7B4D878ABFE89": {
+      "isa": "XCBuildConfiguration",
+      "buildSettings": {
+        "ALWAYS_SEARCH_USER_PATHS": "NO",
+        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+        "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
+        "CLANG_ENABLE_MODULES": "YES",
+        "CLANG_ENABLE_OBJC_ARC": "YES",
+        "CODE_SIGN_STYLE": "Automatic",
+        "CURRENT_PROJECT_VERSION": "1",
+        "DEVELOPMENT_TEAM": "",
+        "ENABLE_PREVIEWS": "YES",
+        "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+        "GENERATE_INFOPLIST_FILE": "NO",
+        "INFOPLIST_FILE": "ShortsLibrary/Info.plist",
+        "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
+        "LD_RUNPATH_SEARCH_PATHS": [
+          "$(inherited)",
+          "@executable_path/Frameworks"
+        ],
+        "MARKETING_VERSION": "1.0",
+        "PRODUCT_BUNDLE_IDENTIFIER": "com.leo.shortslibrary",
+        "PRODUCT_NAME": "$(TARGET_NAME)",
+        "SDKROOT": "iphoneos",
+        "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
+        "SWIFT_EMIT_LOC_STRINGS": "YES",
+        "SWIFT_VERSION": "5.0",
+        "TARGETED_DEVICE_FAMILY": "1,2",
+        "COPY_PHASE_STRIP": "NO",
+        "DEBUG_INFORMATION_FORMAT": "dwarf-with-dsym",
+        "ENABLE_NS_ASSERTIONS": "NO",
+        "MTL_ENABLE_DEBUG_INFO": "NO",
+        "SWIFT_COMPILATION_MODE": "wholemodule",
+        "SWIFT_OPTIMIZATION_LEVEL": "-O",
+        "VALIDATE_PRODUCT": "YES"
+      },
+      "name": "Release"
+    },
+    "12D04D787E90C9B967248BFD": {
+      "isa": "XCConfigurationList",
+      "buildConfigurations": [
+        "40BC6E4EC777C35CD827CBB6",
+        "2FC9CCE37C139D977277E3A9"
+      ],
+      "defaultConfigurationIsVisible": "0",
+      "defaultConfigurationName": "Release"
+    },
+    "7ADE71700E9404B10E13B577": {
+      "isa": "XCConfigurationList",
+      "buildConfigurations": [
+        "745105746D37935952CF2452",
+        "57F11DAE29C7B4D878ABFE89"
+      ],
+      "defaultConfigurationIsVisible": "0",
+      "defaultConfigurationName": "Release"
+    },
+    "AE9D793910523DD9794189F5": {
+      "isa": "PBXProject",
+      "attributes": {
+        "BuildIndependentTargetsInParallel": "1",
+        "LastUpgradeCheck": "2700",
+        "TargetAttributes": {
+          "BF17474B2E0B17438DC2176A": {
+            "CreatedOnToolsVersion": "27.2",
+            "ProvisioningStyle": "Automatic"
+          }
+        }
+      },
+      "buildConfigurationList": "12D04D787E90C9B967248BFD",
+      "compatibilityVersion": "Xcode 14.0",
+      "developmentRegion": "en",
+      "hasScannedForEncodings": "0",
+      "knownRegions": [
+        "en",
+        "Base"
+      ],
+      "mainGroup": "D68D87E73FD7CA67BB8C99BE",
+      "productRefGroup": "74E873CC8E059A15F9F0F72E",
+      "projectDirPath": "",
+      "projectRoot": "",
+      "targets": [
+        "BF17474B2E0B17438DC2176A"
+      ]
+    }
+  },
+  "rootObject": "AE9D793910523DD9794189F5"
+}
