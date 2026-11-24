@@ -11,7 +11,9 @@ final class WebViewPageLoader: NSObject, WKNavigationDelegate {
     private var timeoutWorkItem: DispatchWorkItem?
 
     func renderedHTML(from url: URL) async throws -> (String, URL) {
-        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .default()
+        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: configuration)
         self.webView = webView
         self.originalURL = url
         webView.navigationDelegate = self
