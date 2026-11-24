@@ -25,6 +25,7 @@ final class LibraryItem {
     var sourceImageURLStrings: [String]
     var downloadFailed: Bool
     var lastDownloadError: String?
+    var needsAudioMux: Bool
 
     @Relationship(deleteRule: .cascade)
     var files: [MediaFile] = []
@@ -56,6 +57,7 @@ final class LibraryItem {
         self.sourceImageURLStrings = []
         self.downloadFailed = false
         self.lastDownloadError = nil
+        self.needsAudioMux = false
     }
 
     var sourceEnum: MediaSource {

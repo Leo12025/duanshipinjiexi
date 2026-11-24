@@ -3,14 +3,19 @@ import WebKit
 
 @MainActor
 final class WebViewPageLoader: NSObject, WKNavigationDelegate {
-    static let shared = WebViewPageLoader()
+    static func load(from url: URL) async throws -> (String, URL) {
+        let loader = WebViewPageLoader()
+        return try await loader.renderedHTML(from: url)
+    }
 
     private var continuation: CheckedContinuation<(String, URL), Error>?
     private var webView: WKWebView?
     private var originalURL: URL?
     private var timeoutWorkItem: DispatchWorkItem?
 
-    func renderedHTML(from url: URL) async throws -> (String, URL) {
+    private override init() {}
+
+    private func renderedHTML(from url: URL) async throws -> (String, URL) {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: configuration)

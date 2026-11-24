@@ -8,6 +8,7 @@ struct PageMetadata {
     var imageURLs: [URL] = []
     var videoURLs: [URL] = []
     var audioURLs: [URL] = []
+    var videoQualityHints: [URL: VideoQualityHint] = [:]
     var finalURL: URL
     var rawHTML: String
 }
@@ -68,6 +69,8 @@ enum HTMLMetadataExtractor {
         for url in embeddedAudioURLs(in: html) where !result.audioURLs.contains(url) {
             result.audioURLs.append(url)
         }
+
+        result.videoQualityHints = videoQualityHints(in: html)
 
         if result.image == nil, let first = result.imageURLs.first {
             result.image = first
@@ -258,6 +261,53 @@ enum HTMLMetadataExtractor {
         let r = match.range(at: 1)
         guard r.location != NSNotFound else { return nil }
         return ns.substring(with: r)
+    }
+
+    private static func videoQualityHints(in html: String) -> [URL: VideoQualityHint] {
+        var hints: [URL: VideoQualityHint] = [:]
+        let ns = html as NSString
+        let pattern = #""(?:width|video_width)"\s*:\s*(\d{3,4})"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return hints }
+        let matches = regex.matches(in: html, options: [], range: NSRange(location: 0, length: ns.length))
+
+        for match in matches {
+            let location = match.range(at: 0).location
+            let start = max(0, location - 500)
+            let length = min(ns.length - start, 1400)
+            let window = ns.substring(with: NSRange(location: start, length: length))
+
+            guard let width = firstCapture(pattern: #""(?:width|video_width)"\s*:\s*(\d{3,4})"#, in: window),
+                  let height = firstCapture(pattern: #""(?:height|video_height)"\s*:\s*(\d{3,4})"#, in: window),
+                  let widthValue = Int(width), let heightValue = Int(height) else { continue }
+
+            let bitrate = firstCapture(pattern: #""(?:bitrate|bandwidth)"\s*:\s*(\d{3,9})"#, in: window)
+                .flatMap(Int.init)
+            let dashID = firstCapture(pattern: #""id"\s*:\s*(\d+)"#, in: window)
+            let quality = dashID.flatMap(dashQualityLabel)
+                ?? firstCapture(pattern: #""(?:quality|qualityDescription)"\s*:\s*"([^"]{1,20})""#, in: window)
+
+            let hint = VideoQualityHint(
+                width: widthValue,
+                height: heightValue,
+                bitrate: bitrate,
+                quality: quality
+            )
+            for url in quotedURLs(in: window) where isVideoURL(url) {
+                let current = (hints[url]?.width ?? 0) * (hints[url]?.height ?? 0)
+                if widthValue * heightValue > current { hints[url] = hint }
+            }
+        }
+        return hints
+    }
+
+    private static func dashQualityLabel(_ id: String) -> String? {
+        switch id {
+        case "80": return "1080P"
+        case "64": return "720P"
+        case "32": return "480P"
+        case "16": return "360P"
+        default: return nil
+        }
     }
 
     private static func flatten(_ value: Any) -> [[String: Any]] {

@@ -12,33 +12,42 @@ struct VideoCandidate {
     }
 }
 
-enum MediaQualityHeuristic {
-    static func videoCandidate(for url: URL) -> VideoCandidate {
-        let text = url.absoluteString.lowercased()
-        var width: Int?
-        var height: Int?
-        var bitrate: Int?
+struct VideoQualityHint {
+    let width: Int?
+    let height: Int?
+    let bitrate: Int?
+    let quality: String?
+}
 
-        if let groups = captures(pattern: #"(\d{3,4})[x](\d{3,4})"#, in: text), groups.count >= 3 {
-            width = Int(groups[1])
-            height = Int(groups[2])
+enum MediaQualityHeuristic {
+    static func videoCandidate(for url: URL, hint: VideoQualityHint? = nil) -> VideoCandidate {
+        let text = url.absoluteString.lowercased()
+        var width = hint?.width
+        var height = hint?.height
+        var bitrate = hint?.bitrate
+
+        if width == nil || height == nil,
+           let groups = captures(pattern: #"(\d{3,4})[x](\d{3,4})"#, in: text), groups.count >= 3 {
+            if width == nil { width = Int(groups[1]) }
+            if height == nil { height = Int(groups[2]) }
         }
         if height == nil, let value = firstCapture(pattern: #"(\d{3,4})p"#, in: text) {
             height = Int(value)
         }
-        if let value = firstCapture(pattern: #"width[=_]?(\d{3,4})"#, in: text) {
+        if width == nil, let value = firstCapture(pattern: #"width[=_]?(\d{3,4})"#, in: text) {
             width = Int(value)
         }
-        if let value = firstCapture(pattern: #"height[=_]?(\d{3,4})"#, in: text) {
+        if height == nil, let value = firstCapture(pattern: #"height[=_]?(\d{3,4})"#, in: text) {
             height = Int(value)
         }
-        if let value = firstCapture(pattern: #"bitrate[=_]?(\d{3,8})"#, in: text) {
+        if bitrate == nil, let value = firstCapture(pattern: #"bitrate[=_]?(\d{3,8})"#, in: text) {
             bitrate = Int(value)
         }
 
+        let quality = hint?.quality ?? qualityLabel(width: width, height: height, bitrate: bitrate)
         return VideoCandidate(
             url: url,
-            quality: qualityLabel(width: width, height: height, bitrate: bitrate),
+            quality: quality,
             width: width,
             height: height,
             bitrate: bitrate
@@ -108,6 +117,7 @@ struct ParsedMedia {
     let images: [URL]
     let videos: [VideoCandidate]
     let audioURL: URL?
+    let needsAudioMux: Bool
 
     var bestVideo: VideoCandidate? {
         videos.max { lhs, rhs in

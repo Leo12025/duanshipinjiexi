@@ -34,6 +34,7 @@ enum LibraryBackup {
                     sourceImageURLStrings: item.sourceImageURLStrings,
                     downloadFailed: item.downloadFailed,
                     lastDownloadError: item.lastDownloadError,
+                    needsAudioMux: item.needsAudioMux,
                     files: item.files.map { file in
                         LibraryBackupMediaFile(
                             relativePath: file.relativePath,
@@ -108,6 +109,7 @@ enum LibraryBackup {
             item.sourceImageURLStrings = saved.sourceImageURLStrings
             item.downloadFailed = saved.downloadFailed
             item.lastDownloadError = saved.lastDownloadError
+            item.needsAudioMux = saved.needsAudioMux ?? false
 
             for file in item.files {
                 context.delete(file)
@@ -166,6 +168,7 @@ private struct LibraryBackupItem: Codable {
     let sourceImageURLStrings: [String]
     let downloadFailed: Bool
     let lastDownloadError: String?
+    let needsAudioMux: Bool?
     let files: [LibraryBackupMediaFile]
 }
 

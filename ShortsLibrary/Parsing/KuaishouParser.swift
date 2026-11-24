@@ -12,7 +12,9 @@ struct KuaishouParser: PlatformParser {
             throw AppError.parsingFailed("无法提取快手视频 ID")
         }
 
-        let videos = metadata.videoURLs.map { MediaQualityHeuristic.videoCandidate(for: $0) }
+        let videos = metadata.videoURLs.map {
+            MediaQualityHeuristic.videoCandidate(for: $0, hint: metadata.videoQualityHints[$0])
+        }
         let images = MediaQualityHeuristic.sortedImages(metadata.imageURLs)
         guard !videos.isEmpty || !images.isEmpty else {
             throw AppError.noMedia
@@ -29,7 +31,8 @@ struct KuaishouParser: PlatformParser {
             coverURL: metadata.image,
             images: images,
             videos: videos,
-            audioURL: nil
+            audioURL: nil,
+            needsAudioMux: false
         )
     }
 

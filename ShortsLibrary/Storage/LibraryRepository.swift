@@ -6,19 +6,39 @@ final class LibraryRepository {
     static let shared = LibraryRepository()
     private init() {}
 
-    func existingItem(source: MediaSource, sourceId: String, in context: ModelContext) -> LibraryItem? {
+    func existingItem(
+        source: MediaSource,
+        sourceId: String,
+        in context: ModelContext,
+        includeTrashed: Bool = false
+    ) -> LibraryItem? {
         let sourceValue = source.rawValue
-        let predicate = #Predicate<LibraryItem> { item in
-            item.source == sourceValue && item.sourceId == sourceId && !item.isTrashed
+        let descriptor: FetchDescriptor<LibraryItem>
+        if includeTrashed {
+            descriptor = FetchDescriptor(predicate: #Predicate<LibraryItem> { item in
+                item.source == sourceValue && item.sourceId == sourceId
+            })
+        } else {
+            descriptor = FetchDescriptor(predicate: #Predicate<LibraryItem> { item in
+                item.source == sourceValue && item.sourceId == sourceId && !item.isTrashed
+            })
         }
-        var descriptor = FetchDescriptor<LibraryItem>(predicate: predicate)
-        descriptor.fetchLimit = 1
-        return try? context.fetch(descriptor).first
+        var limited = descriptor
+        limited.fetchLimit = 1
+        return try? context.fetch(limited).first
     }
 
     @discardableResult
     func makeItem(from parsed: ParsedMedia, in context: ModelContext) throws -> LibraryItem {
-        if let existing = existingItem(source: parsed.source, sourceId: parsed.sourceId, in: context) {
+        if let existing = existingItem(
+            source: parsed.source,
+            sourceId: parsed.sourceId,
+            in: context,
+            includeTrashed: true
+        ) {
+            existing.isTrashed = false
+            existing.trashedAt = nil
+            existing.kind = parsed.kind.rawValue
             existing.title = parsed.title
             existing.author = parsed.author
             existing.caption = parsed.caption
@@ -27,6 +47,7 @@ final class LibraryRepository {
             existing.sourceAudioURLString = parsed.audioURL?.absoluteString
             existing.sourceCoverURLString = parsed.coverURL?.absoluteString
             existing.sourceImageURLStrings = parsed.images.map(\.absoluteString)
+            existing.needsAudioMux = parsed.needsAudioMux
             existing.updatedAt = Date()
             return existing
         }
@@ -44,6 +65,7 @@ final class LibraryRepository {
         item.sourceAudioURLString = parsed.audioURL?.absoluteString
         item.sourceCoverURLString = parsed.coverURL?.absoluteString
         item.sourceImageURLStrings = parsed.images.map(\.absoluteString)
+        item.needsAudioMux = parsed.needsAudioMux
         context.insert(item)
         return item
     }

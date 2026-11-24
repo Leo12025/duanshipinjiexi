@@ -12,7 +12,9 @@ struct XiaohongshuParser: PlatformParser {
             throw AppError.parsingFailed("无法提取小红书笔记 ID")
         }
 
-        let videos = metadata.videoURLs.map { MediaQualityHeuristic.videoCandidate(for: $0) }
+        let videos = metadata.videoURLs.map {
+            MediaQualityHeuristic.videoCandidate(for: $0, hint: metadata.videoQualityHints[$0])
+        }
         let images = MediaQualityHeuristic.sortedImages(metadata.imageURLs)
         let kind = MediaKindResolver.resolve(videos: videos.count, images: images.count, audios: 0)
 
@@ -31,7 +33,8 @@ struct XiaohongshuParser: PlatformParser {
             coverURL: metadata.image ?? images.first,
             images: images,
             videos: videos,
-            audioURL: nil
+            audioURL: nil,
+            needsAudioMux: false
         )
     }
 
