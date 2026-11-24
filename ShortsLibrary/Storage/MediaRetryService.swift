@@ -75,7 +75,38 @@ enum MediaRetryService {
             )
         }
 
-        if item.kindEnum == .imageText {
+        if item.kindEnum == .audio,
+           let audio = item.sourceAudioURLString,
+           let url = URL(string: audio),
+           item.audioFile?.existsOnDisk != true {
+            let ext = url.pathExtension.lowercased()
+            let filename = "audio.\(ext.isEmpty ? "m4a" : ext)"
+            let relative = AppPaths.relativePath(source: item.source, sourceId: item.sourceId, filename: filename)
+            let destination = AppPaths.root.appendingPathComponent(relative)
+            DownloadQueue.shared.enqueue(
+                url: url,
+                destination: destination,
+                label: "音频 · \(item.title)",
+                onFinish: { location in
+                    if item.audioFile == nil {
+                        let info = await MediaDownloader.probeVideo(at: location)
+                        LibraryRepository.shared.addFile(
+                            to: item,
+                            relativePath: relative,
+                            role: .audio,
+                            mimeType: audioMimeType(for: ext),
+                            in: context
+                        )
+                        item.duration = info.duration
+                        item.byteSize = info.byteSize
+                    }
+                    try? context.save()
+                },
+                onError: markFailure
+            )
+        }
+
+        if [.image, .imageText, .dynamic].contains(item.kindEnum) {
             for (index, string) in item.sourceImageURLStrings.enumerated() {
                 guard let url = URL(string: string) else { continue }
                 let ext = url.pathExtension.lowercased()
@@ -117,9 +148,12 @@ enum MediaRetryService {
 
         await retryCover(item: item, in: context, failures: &failures)
 
-        if item.kindEnum == .video {
+        switch item.kindEnum {
+        case .video:
             await retryVideo(item: item, in: context, failures: &failures)
-        } else {
+        case .audio:
+            await retryAudio(item: item, in: context, failures: &failures)
+        case .image, .imageText, .dynamic:
             await retryImages(item: item, in: context, failures: &failures)
         }
 
@@ -206,6 +240,42 @@ enum MediaRetryService {
         }
     }
 
+    private static func retryAudio(
+        item: LibraryItem,
+        in context: ModelContext,
+        failures: inout [String]
+    ) async {
+        guard let string = item.sourceAudioURLString,
+              let url = URL(string: string),
+              item.audioFile?.existsOnDisk != true else { return }
+
+        let ext = url.pathExtension.lowercased()
+        let relative = AppPaths.relativePath(
+            source: item.source,
+            sourceId: item.sourceId,
+            filename: "audio.\(ext.isEmpty ? "m4a" : ext)"
+        )
+        let destination = AppPaths.root.appendingPathComponent(relative)
+
+        do {
+            try await MediaDownloader.download(url: url, to: destination)
+            if item.audioFile == nil {
+                let info = await MediaDownloader.probeVideo(at: destination)
+                LibraryRepository.shared.addFile(
+                    to: item,
+                    relativePath: relative,
+                    role: .audio,
+                    mimeType: audioMimeType(for: ext),
+                    in: context
+                )
+                item.duration = info.duration
+                item.byteSize = info.byteSize
+            }
+        } catch {
+            failures.append("音频：\(error.localizedDescription)")
+        }
+    }
+
     private static func retryImages(
         item: LibraryItem,
         in context: ModelContext,
@@ -243,6 +313,16 @@ enum MediaRetryService {
             } catch {
                 failures.append("图片 \(index + 1)：\(error.localizedDescription)")
             }
+        }
+    }
+
+    private static func audioMimeType(for ext: String) -> String {
+        switch ext.lowercased() {
+        case "mp3": return "audio/mpeg"
+        case "wav": return "audio/wav"
+        case "aac": return "audio/aac"
+        case "flac": return "audio/flac"
+        default: return "audio/mp4"
         }
     }
 

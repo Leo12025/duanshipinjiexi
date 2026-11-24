@@ -24,6 +24,7 @@ final class LibraryRepository {
             existing.caption = parsed.caption
             existing.pageURLString = parsed.pageURL.absoluteString
             existing.sourceVideoURLString = parsed.bestVideo?.url.absoluteString
+            existing.sourceAudioURLString = parsed.audioURL?.absoluteString
             existing.sourceCoverURLString = parsed.coverURL?.absoluteString
             existing.sourceImageURLStrings = parsed.images.map(\.absoluteString)
             existing.updatedAt = Date()
@@ -40,6 +41,7 @@ final class LibraryRepository {
             pageURL: parsed.pageURL
         )
         item.sourceVideoURLString = parsed.bestVideo?.url.absoluteString
+        item.sourceAudioURLString = parsed.audioURL?.absoluteString
         item.sourceCoverURLString = parsed.coverURL?.absoluteString
         item.sourceImageURLStrings = parsed.images.map(\.absoluteString)
         context.insert(item)

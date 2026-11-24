@@ -20,6 +20,7 @@ final class LibraryItem {
     var resolution: String?
     var byteSize: Int64?
     var sourceVideoURLString: String?
+    var sourceAudioURLString: String?
     var sourceCoverURLString: String?
     var sourceImageURLStrings: [String]
     var downloadFailed: Bool
@@ -50,6 +51,7 @@ final class LibraryItem {
         self.isTrashed = false
         self.trashedAt = nil
         self.sourceVideoURLString = nil
+        self.sourceAudioURLString = nil
         self.sourceCoverURLString = nil
         self.sourceImageURLStrings = []
         self.downloadFailed = false
@@ -77,6 +79,10 @@ final class LibraryItem {
         files.first { $0.role == FileRole.video.rawValue }
     }
 
+    var audioFile: MediaFile? {
+        files.first { $0.role == FileRole.audio.rawValue }
+    }
+
     var imageFiles: [MediaFile] {
         files
             .filter { $0.role == FileRole.image.rawValue }
@@ -86,7 +92,10 @@ final class LibraryItem {
     var needsRetry: Bool {
         if downloadFailed { return true }
         if kindEnum == .video, sourceVideoURLString != nil, videoFile == nil { return true }
-        if kindEnum == .imageText, !sourceImageURLStrings.isEmpty, imageFiles.isEmpty { return true }
+        if kindEnum == .audio, sourceAudioURLString != nil, audioFile == nil { return true }
+        if [.image, .imageText, .dynamic].contains(kindEnum),
+           !sourceImageURLStrings.isEmpty,
+           imageFiles.isEmpty { return true }
         return false
     }
 }
