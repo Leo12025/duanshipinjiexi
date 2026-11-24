@@ -15,8 +15,8 @@ struct BilibiliParser: PlatformParser {
         let audios = metadata.audioURLs
         let videos = metadata.videoURLs
             .filter { !audios.contains($0) }
-            .map { VideoCandidate(url: $0, quality: "公开最高画质", width: nil, height: nil, bitrate: nil) }
-        let images = metadata.imageURLs
+            .map { MediaQualityHeuristic.videoCandidate(for: $0) }
+        let images = MediaQualityHeuristic.sortedImages(metadata.imageURLs)
         let dynamic = isDynamicPage(finalURL)
 
         guard !videos.isEmpty || !audios.isEmpty || !images.isEmpty else {

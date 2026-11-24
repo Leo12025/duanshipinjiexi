@@ -12,6 +12,80 @@ struct VideoCandidate {
     }
 }
 
+enum MediaQualityHeuristic {
+    static func videoCandidate(for url: URL) -> VideoCandidate {
+        let text = url.absoluteString.lowercased()
+        var width: Int?
+        var height: Int?
+        var bitrate: Int?
+
+        if let groups = captures(pattern: #"(\d{3,4})[x](\d{3,4})"#, in: text), groups.count >= 3 {
+            width = Int(groups[1])
+            height = Int(groups[2])
+        }
+        if height == nil, let value = firstCapture(pattern: #"(\d{3,4})p"#, in: text) {
+            height = Int(value)
+        }
+        if let value = firstCapture(pattern: #"width[=_]?(\d{3,4})"#, in: text) {
+            width = Int(value)
+        }
+        if let value = firstCapture(pattern: #"height[=_]?(\d{3,4})"#, in: text) {
+            height = Int(value)
+        }
+        if let value = firstCapture(pattern: #"bitrate[=_]?(\d{3,8})"#, in: text) {
+            bitrate = Int(value)
+        }
+
+        return VideoCandidate(
+            url: url,
+            quality: qualityLabel(width: width, height: height, bitrate: bitrate),
+            width: width,
+            height: height,
+            bitrate: bitrate
+        )
+    }
+
+    static func sortedImages(_ urls: [URL]) -> [URL] {
+        urls.sorted { estimatedPixels(for: $0) > estimatedPixels(for: $1) }
+    }
+
+    static func estimatedPixels(for url: URL) -> Int {
+        let candidate = videoCandidate(for: url)
+        if candidate.pixelCount > 0 { return candidate.pixelCount }
+        return candidate.height.map { $0 * $0 } ?? 0
+    }
+
+    private static func qualityLabel(width: Int?, height: Int?, bitrate: Int?) -> String {
+        if let width, let height {
+            return "\(width)x\(height)"
+        }
+        if let height {
+            return "\(height)p"
+        }
+        if let bitrate {
+            return "\(bitrate / 1000) kbps"
+        }
+        return "公开最高画质"
+    }
+
+    private static func firstCapture(pattern: String, in text: String) -> String? {
+        guard let groups = captures(pattern: pattern, in: text), groups.count > 1 else { return nil }
+        return groups[1]
+    }
+
+    private static func captures(pattern: String, in text: String) -> [String]? {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let ns = text as NSString
+        let range = NSRange(location: 0, length: ns.length)
+        guard let match = regex.firstMatch(in: text, options: [], range: range) else { return nil }
+        return (0..<match.numberOfRanges).compactMap { index in
+            let r = match.range(at: index)
+            guard r.location != NSNotFound else { return nil }
+            return ns.substring(with: r)
+        }
+    }
+}
+
 enum MediaKindResolver {
     static func resolve(videos: Int, images: Int, audios: Int, isDynamic: Bool = false) -> MediaKind {
         if videos > 0 { return .video }

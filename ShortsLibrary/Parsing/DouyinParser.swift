@@ -5,17 +5,15 @@ struct DouyinParser: PlatformParser {
     let supportedHosts = ["douyin.com", "iesdouyin.com"]
 
     func parse(url: URL) async throws -> ParsedMedia {
-        let (html, finalURL) = try await NetworkClient.shared.html(from: url)
+        let (html, finalURL) = try await PublicPageLoader.load(url: url)
         let metadata = HTMLMetadataExtractor.extract(html: html, finalURL: finalURL)
 
         guard let sourceId = extractSourceID(from: finalURL, html: html) else {
             throw AppError.parsingFailed("无法提取抖音视频 ID")
         }
 
-        let videos = metadata.videoURLs.map {
-            VideoCandidate(url: $0, quality: "公开最高画质", width: nil, height: nil, bitrate: nil)
-        }
-        let images = metadata.imageURLs
+        let videos = metadata.videoURLs.map { MediaQualityHeuristic.videoCandidate(for: $0) }
+        let images = MediaQualityHeuristic.sortedImages(metadata.imageURLs)
         guard !videos.isEmpty || !images.isEmpty else {
             throw AppError.noMedia
         }

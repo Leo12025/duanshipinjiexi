@@ -12,10 +12,8 @@ struct KuaishouParser: PlatformParser {
             throw AppError.parsingFailed("无法提取快手视频 ID")
         }
 
-        let videos = metadata.videoURLs.map {
-            VideoCandidate(url: $0, quality: "公开最高画质", width: nil, height: nil, bitrate: nil)
-        }
-        let images = metadata.imageURLs
+        let videos = metadata.videoURLs.map { MediaQualityHeuristic.videoCandidate(for: $0) }
+        let images = MediaQualityHeuristic.sortedImages(metadata.imageURLs)
         guard !videos.isEmpty || !images.isEmpty else {
             throw AppError.noMedia
         }
