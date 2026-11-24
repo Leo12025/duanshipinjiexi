@@ -4,10 +4,11 @@ import AVKit
 
 struct LocalImageView: View {
     let url: URL
+    var thumbnail = false
 
     var body: some View {
         Group {
-            if let image = UIImage(contentsOfFile: url.path) {
+            if let image = thumbnail ? ThumbnailCache.image(for: url) : UIImage(contentsOfFile: url.path) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()

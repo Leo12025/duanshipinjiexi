@@ -15,6 +15,8 @@ struct LibraryListView: View {
     @State private var isParsing = false
     @State private var parseMessage: String?
     @State private var parseFailed = false
+    @State private var existingItem: LibraryItem?
+    @State private var loginRequiredPlatform: PlatformLogin?
 
     init(filter: LibraryFilter, isAdding: Binding<Bool>) {
         self.filter = filter
@@ -163,6 +165,31 @@ struct LibraryListView: View {
                     .font(.caption)
                     .foregroundStyle(parseFailed ? .red : .green)
             }
+
+            if let existingItem {
+                HStack(spacing: 8) {
+                    Text("如需获取最新资源可重新下载")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("重新下载") {
+                        LinkIngestService.redownload(item: existingItem, in: modelContext)
+                        self.existingItem = nil
+                        parseMessage = "已重新加入下载队列"
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption)
+                }
+            }
+
+            if let platform = loginRequiredPlatform {
+                Button("去登录 \(platform.displayName)") {
+                    NotificationCenter.default.post(name: .openPlatformLogin, object: platform)
+                    loginRequiredPlatform = nil
+                }
+                .buttonStyle(.bordered)
+                .font(.caption)
+            }
         }
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
@@ -173,14 +200,22 @@ struct LibraryListView: View {
         isParsing = true
         parseMessage = nil
         parseFailed = false
+        existingItem = nil
+        loginRequiredPlatform = nil
         defer { isParsing = false }
 
         do {
-            parseMessage = try await LinkIngestService.ingest(text: inputText, modelContext: modelContext)
+            let outcome = try await LinkIngestService.ingest(text: inputText, modelContext: modelContext)
+            parseMessage = outcome.message
+            existingItem = outcome.isNew ? nil : outcome.item
             inputText = ""
         } catch {
             parseFailed = true
             parseMessage = error.localizedDescription
+            if case AppError.loginRequired(let name) = error,
+               let platform = PlatformLogin.allCases.first(where: { $0.displayName == name }) {
+                loginRequiredPlatform = platform
+            }
         }
     }
 }
@@ -192,7 +227,7 @@ private struct ItemCard: View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack {
                 if let cover = item.coverFile, cover.existsOnDisk {
-                    LocalImageView(url: cover.fileURL)
+                    LocalImageView(url: cover.fileURL, thumbnail: true)
                 } else {
                     Rectangle()
                         .fill(.quaternary)

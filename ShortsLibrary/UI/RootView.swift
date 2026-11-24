@@ -198,6 +198,11 @@ struct RootView: View {
         } message: {
             Text(detectedLink?.absoluteString ?? "")
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openPlatformLogin)) { output in
+            if let platform = output.object as? PlatformLogin {
+                loginPlatform = platform
+            }
+        }
         .onOpenURL { url in
             if let target = Self.extractURL(from: url) {
                 initialURL = target
@@ -211,7 +216,7 @@ struct RootView: View {
     private func parseDetectedLink(_ link: URL) {
         Task {
             do {
-                alertMessage = try await LinkIngestService.ingest(url: link, modelContext: modelContext)
+                alertMessage = try await LinkIngestService.ingest(url: link, modelContext: modelContext).message
             } catch {
                 alertMessage = error.localizedDescription
             }
