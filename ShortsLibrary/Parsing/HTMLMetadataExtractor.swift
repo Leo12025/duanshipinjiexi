@@ -1,0 +1,261 @@
+import Foundation
+
+struct PageMetadata {
+    var title: String?
+    var description: String?
+    var author: String?
+    var image: URL?
+    var imageURLs: [URL] = []
+    var videoURLs: [URL] = []
+    var finalURL: URL
+    var rawHTML: String
+}
+
+enum HTMLMetadataExtractor {
+    static func extract(html: String, finalURL: URL) -> PageMetadata {
+        var result = PageMetadata(finalURL: finalURL, rawHTML: html)
+
+        let metaTags = capture(pattern: #"(<meta\b[^>]*>)"#, in: html)
+            .compactMap { $0.first }
+        for tag in metaTags {
+            let attributes = self.attributes(in: tag)
+            guard let key = (attributes["property"] ?? attributes["name"])?.lowercased() else { continue }
+            let value = decode(attributes["content"] ?? "")
+
+            switch key {
+            case "og:title", "twitter:title":
+                if result.title == nil { result.title = value }
+            case "og:description", "description", "twitter:description":
+                if result.description == nil { result.description = value }
+            case "og:image", "twitter:image", "twitter:image:src":
+                if let url = URL(string: value) {
+                    if result.image == nil { result.image = url }
+                    if !result.imageURLs.contains(url) { result.imageURLs.append(url) }
+                }
+            case "og:video", "og:video:secure_url", "twitter:player":
+                if let url = URL(string: value), !result.videoURLs.contains(url) {
+                    result.videoURLs.append(url)
+                }
+            case "author", "og:article:author", "article:author":
+                if result.author == nil { result.author = value }
+            default:
+                break
+            }
+        }
+
+        applyJSONLD(html: html, to: &result)
+        applyPublicJSONFallbacks(html: html, to: &result)
+
+        for url in embeddedVideoURLs(in: html) where !result.videoURLs.contains(url) {
+            result.videoURLs.append(url)
+        }
+        for url in embeddedImageURLs(in: html) where !result.imageURLs.contains(url) {
+            result.imageURLs.append(url)
+        }
+        if result.image == nil, let first = result.imageURLs.first {
+            result.image = first
+        }
+
+        return result
+    }
+
+    private static func applyJSONLD(html: String, to result: inout PageMetadata) {
+        let pattern = #"<script\b[^>]*type\s*=\s*["']application/ld\+json["'][^>]*>(.*?)</script>"#
+        let blocks = capture(pattern: pattern, in: html, options: [.dotMatchesLineSeparators])
+
+        for block in blocks {
+            guard let raw = block.dropFirst().first,
+                  let data = raw.data(using: .utf8),
+                  let object = try? JSONSerialization.jsonObject(with: data) else { continue }
+
+            for dictionary in flatten(object) {
+                if result.title == nil {
+                    result.title = dictionary["headline"] as? String ?? dictionary["name"] as? String
+                }
+                if result.description == nil {
+                    result.description = dictionary["description"] as? String
+                }
+                if result.author == nil {
+                    if let author = dictionary["author"] as? String {
+                        result.author = author
+                    } else if let author = dictionary["author"] as? [String: Any],
+                              let name = author["name"] as? String {
+                        result.author = name
+                    }
+                }
+                if let thumbnail = firstString(in: dictionary["thumbnailUrl"]),
+                   let url = URL(string: thumbnail) {
+                    result.image = url
+                }
+                for key in ["contentUrl", "embedUrl", "url"] {
+                    if let value = firstString(in: dictionary[key]),
+                       let url = URL(string: value),
+                       !result.videoURLs.contains(url) {
+                        result.videoURLs.append(url)
+                    }
+                }
+            }
+        }
+    }
+
+    private static func applyPublicJSONFallbacks(html: String, to result: inout PageMetadata) {
+        if result.title == nil,
+           let raw = firstCapture(pattern: #""(?:title|name)"\s*:\s*"((?:[^"\\]|\\.)*)""#, in: html) {
+            result.title = decode(raw)
+        }
+        if result.author == nil,
+           let raw = firstCapture(pattern: #""(?:nickname|nickName|userName|authorName)"\s*:\s*"((?:[^"\\]|\\.)*)""#, in: html) {
+            result.author = decode(raw)
+        }
+        if result.description == nil,
+           let raw = firstCapture(pattern: #""(?:desc|description|caption)"\s*:\s*"((?:[^"\\]|\\.)*)""#, in: html) {
+            result.description = decode(raw)
+        }
+    }
+
+    private static func embeddedVideoURLs(in html: String) -> [URL] {
+        var urls: [URL] = []
+        let patterns = [
+            #""url_list"\s*:\s*\[(.*?)\]"#,
+            #""playUrl"\s*:\s*"((?:[^"\\]|\\.)*)""#,
+            #""videoUrl"\s*:\s*"((?:[^"\\]|\\.)*)""#,
+            #""play_url"\s*:\s*"((?:[^"\\]|\\.)*)""#
+        ]
+
+        for pattern in patterns {
+            for group in capture(pattern: pattern, in: html, options: [.dotMatchesLineSeparators]) {
+                guard group.count > 1 else { continue }
+                for url in quotedURLs(in: group[1]) where isVideoURL(url) && !urls.contains(url) {
+                    urls.append(url)
+                }
+            }
+        }
+
+        for url in quotedURLs(in: html) where isVideoURL(url) && !urls.contains(url) {
+            urls.append(url)
+        }
+        return urls
+    }
+
+    private static func embeddedImageURLs(in html: String) -> [URL] {
+        var urls: [URL] = []
+        let patterns = [
+            #""imageList"\s*:\s*\[(.*?)\]"#,
+            #""images"\s*:\s*\[(.*?)\]"#,
+            #""image"\s*:\s*\[(.*?)\]"#
+        ]
+
+        for pattern in patterns {
+            for group in capture(pattern: pattern, in: html, options: [.dotMatchesLineSeparators]) {
+                guard group.count > 1 else { continue }
+                for url in quotedURLs(in: group[1]) where isImageURL(url) && !urls.contains(url) {
+                    urls.append(url)
+                }
+            }
+        }
+        return urls
+    }
+
+    private static func quotedURLs(in text: String) -> [URL] {
+        capture(pattern: #""(https?:[^"]+)""#, in: text).compactMap { pair in
+            guard let raw = pair.dropFirst().first else { return nil }
+            return URL(string: cleanedURLString(raw))
+        }
+    }
+
+    private static func cleanedURLString(_ raw: String) -> String {
+        raw
+            .replacingOccurrences(of: #"\/"#, with: "/")
+            .replacingOccurrences(of: #"\u002F"#, with: "/")
+    }
+
+    private static func isVideoURL(_ url: URL) -> Bool {
+        let path = url.path.lowercased()
+        let ext = url.pathExtension.lowercased()
+        return ["mp4", "m3u8", "mov"].contains(ext) || path.contains("video")
+    }
+
+    private static func isImageURL(_ url: URL) -> Bool {
+        let ext = url.pathExtension.lowercased()
+        return ["jpg", "jpeg", "png", "webp", "heic"].contains(ext)
+            || (url.host()?.contains("xhscdn") ?? false)
+    }
+
+    private static func firstCapture(pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let ns = text as NSString
+        let range = NSRange(location: 0, length: ns.length)
+        guard let match = regex.firstMatch(in: text, options: [], range: range),
+              match.numberOfRanges > 1 else { return nil }
+        let r = match.range(at: 1)
+        guard r.location != NSNotFound else { return nil }
+        return ns.substring(with: r)
+    }
+
+    private static func flatten(_ value: Any) -> [[String: Any]] {
+        if let dictionary = value as? [String: Any] {
+            if let graph = dictionary["@graph"] as? [Any] {
+                return graph.flatMap(flatten)
+            }
+            return [dictionary]
+        }
+        if let array = value as? [Any] {
+            return array.flatMap(flatten)
+        }
+        return []
+    }
+
+    private static func firstString(in value: Any?) -> String? {
+        if let string = value as? String { return string }
+        if let array = value as? [String] { return array.first }
+        return nil
+    }
+
+    private static func attributes(in tag: String) -> [String: String] {
+        var result: [String: String] = [:]
+        for pair in capture(pattern: #"([\w:-]+)\s*=\s*["']([^"']*)["']"#, in: tag) {
+            guard pair.count >= 3 else { continue }
+            result[pair[1].lowercased()] = decode(pair[2])
+        }
+        return result
+    }
+
+    private static func capture(
+        pattern: String,
+        in text: String,
+        options: NSRegularExpression.Options = []
+    ) -> [[String]] {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else { return [] }
+        let ns = text as NSString
+        let range = NSRange(location: 0, length: ns.length)
+        return regex.matches(in: text, options: [], range: range).map { match in
+            (0..<match.numberOfRanges).compactMap { index in
+                let r = match.range(at: index)
+                guard r.location != NSNotFound else { return nil }
+                return ns.substring(with: r)
+            }
+        }
+    }
+
+    private static func decode(_ raw: String) -> String {
+        var value = raw
+        let replacements = [
+            ("&amp;", "&"),
+            ("&quot;", "\""),
+            ("&#39;", "'"),
+            ("&lt;", "<"),
+            ("&gt;", ">"),
+            ("&nbsp;", " ")
+        ]
+        for (token, replacement) in replacements {
+            value = value.replacingOccurrences(of: token, with: replacement)
+        }
+
+        let escaped = value.replacingOccurrences(of: "\"", with: "\\\"")
+        if let data = "\"\(escaped)\"".data(using: .utf8),
+           let decoded = try? JSONSerialization.jsonObject(with: data) as? String {
+            return decoded
+        }
+        return value
+    }
+}
