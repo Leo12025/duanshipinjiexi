@@ -61,6 +61,8 @@ struct RootView: View {
     @AppStorage("shorts.lastClipboardChangeCount") private var lastClipboardChangeCount = 0
     @AppStorage("shorts.lastPromptedLink") private var lastPromptedLink = ""
 
+    @ObservedObject private var login = LoginSessionManager.shared
+    @State private var loginPlatform: PlatformLogin?
     @State private var filter: LibraryFilter = .all
     @State private var isAdding = false
     @State private var initialURL: URL?
@@ -80,6 +82,27 @@ struct RootView: View {
                     } label: {
                         Label(item.displayName, systemImage: item.icon)
                             .foregroundStyle(filter == item ? .primary : .secondary)
+                    }
+                }
+
+                Section("平台登录") {
+                    ForEach(PlatformLogin.allCases) { platform in
+                        Button {
+                            loginPlatform = platform
+                        } label: {
+                            HStack {
+                                Label(platform.displayName, systemImage: platform.icon)
+                                Spacer()
+                                if login.states[platform] == true {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                } else {
+                                    Text("未登录")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -124,6 +147,9 @@ struct RootView: View {
         .sheet(isPresented: $showingQueue) {
             DownloadQueueView()
         }
+        .sheet(item: $loginPlatform) { platform in
+            PlatformLoginView(platform: platform)
+        }
         .fileImporter(isPresented: $showingRestore, allowedContentTypes: [.json]) { result in
             switch result {
             case .success(let url):
@@ -150,10 +176,14 @@ struct RootView: View {
         .task {
             LibraryRepository.shared.purgeExpiredTrash(in: modelContext)
             await NotificationService.shared.requestAuthorization()
+            await login.refresh()
             checkClipboard()
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { checkClipboard() }
+            if phase == .active {
+                Task { await login.refresh() }
+                checkClipboard()
+            }
         }
         .alert("检测到\(detectedPlatform)链接", isPresented: Binding(
             get: { detectedLink != nil },
