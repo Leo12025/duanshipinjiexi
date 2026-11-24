@@ -127,6 +127,14 @@ final class LoginSessionManager: ObservableObject {
         return await isLoggedIn(platform)
     }
 
+    static func cookieValue(name: String, domain: String) async -> String? {
+        let cookies = await allCookies()
+        return cookies.first { cookie in
+            cookie.name.lowercased() == name.lowercased()
+                && cookie.domain.lowercased().hasSuffix(domain.lowercased())
+        }?.value
+    }
+
     static func cookieHeader(for url: URL) async -> String? {
         let host = url.host()?.lowercased() ?? ""
         guard !host.isEmpty else { return nil }

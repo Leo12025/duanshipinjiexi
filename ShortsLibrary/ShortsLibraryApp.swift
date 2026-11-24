@@ -9,6 +9,6 @@ struct ShortsLibraryApp: App {
         WindowGroup {
             RootView()
         }
-        .modelContainer(for: [LibraryItem.self, MediaFile.self])
+        .modelContainer(for: [LibraryItem.self, MediaFile.self, FollowedAccount.self])
     }
 }

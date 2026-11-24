@@ -70,6 +70,7 @@ struct RootView: View {
     @State private var backupURL: URL?
     @State private var showingRestore = false
     @State private var showingQueue = false
+    @State private var showingFollows = false
     @State private var detectedLink: URL?
     @State private var detectedPlatform = ""
 
@@ -107,6 +108,11 @@ struct RootView: View {
                 }
 
                 Section("数据") {
+                    Button {
+                        showingFollows = true
+                    } label: {
+                        Label("关注列表", systemImage: "person.2")
+                    }
                     Button {
                         showingQueue = true
                     } label: {
@@ -146,6 +152,9 @@ struct RootView: View {
         }
         .sheet(isPresented: $showingQueue) {
             DownloadQueueView()
+        }
+        .sheet(isPresented: $showingFollows) {
+            FollowListView()
         }
         .sheet(item: $loginPlatform) { platform in
             PlatformLoginView(platform: platform)
