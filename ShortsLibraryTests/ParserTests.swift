@@ -126,6 +126,20 @@ final class ParserTests: XCTestCase {
         })
     }
 
+    func testDouyinBuildPlayURLFromURI() {
+        let uri = "v0200fg10000dc2ojrvog65j90it6nhg"
+        let html = #"""
+        <script>{"aweme_detail":{"video":{"play_addr":{"uri":"v0200fg10000dc2ojrvog65j90it6nhg","url_list":[]}}}}</script>
+        """#
+        let detail = DouyinParser().extractDetail(from: html)
+        XCTAssertEqual(detail.playURI, uri)
+        XCTAssertEqual(
+            DouyinParser.buildPlayURL(from: uri)?.absoluteString,
+            "https://aweme.snssdk.com/aweme/v1/play/?video_id=v0200fg10000dc2ojrvog65j90it6nhg&ratio=0p&line=1"
+        )
+        XCTAssertNil(DouyinParser.buildPlayURL(from: "7700000000000000000"))
+    }
+
     func testDouyinPlaywmVariant() {
         let html = #"""
         <script>window._ROUTER_DATA = {"aweme_detail":{"download_addr":{"url_list":["https://aweme.snssdk.com/aweme/v1/playwm/?video_id=abc"]}}}</script>

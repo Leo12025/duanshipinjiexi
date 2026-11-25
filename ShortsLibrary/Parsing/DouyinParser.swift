@@ -40,6 +40,20 @@ struct DouyinParser: PlatformParser {
         imageURLs = unique(imageURLs)
 
         var videoSources: [VideoSource] = []
+        if let uri = detail.playURI {
+            if let playURL = Self.buildPlayURL(from: uri) {
+                videoSources.append(VideoSource(
+                    url: playURL,
+                    context: "build_play_url play_addr ratio=0p line=1"
+                ))
+            }
+            if let playURL = Self.buildPlayURL(from: uri, ratio: "1080p", line: 0) {
+                videoSources.append(VideoSource(
+                    url: playURL,
+                    context: "build_play_url play_addr ratio=1080p line=0"
+                ))
+            }
+        }
         for url in metadata.videoURLs {
             if let clean = Self.noWatermarkVariant(of: url) {
                 videoSources.append(VideoSource(
@@ -127,6 +141,7 @@ struct DouyinParser: PlatformParser {
         var images: [URL] = []
         var videos: [VideoSource] = []
         var audioURL: URL?
+        var playURI: String?
     }
 
     func extractDetail(from html: String) -> DouyinDetail {
@@ -241,6 +256,13 @@ struct DouyinParser: PlatformParser {
                 }
 
                 var nextContext = "\(context) \(lower)"
+                if result.playURI == nil,
+                   lower == "uri",
+                   let value = child as? String,
+                   Self.isPlayURI(value),
+                   nextContext.localizedCaseInsensitiveContains("play_addr") {
+                    result.playURI = value
+                }
                 if ["bitrate", "bit_rate", "gear_name", "quality_type"].contains(lower) {
                     let scalar: String
                     if let number = child as? NSNumber {
@@ -348,6 +370,25 @@ struct DouyinParser: PlatformParser {
 
     private func unique(_ urls: [URL]) -> [URL] {
         URL.dedupeMedia(urls)
+    }
+
+    static func isPlayURI(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 8, trimmed.first == "v" else { return false }
+        return trimmed.dropFirst().allSatisfy { $0.isNumber || $0.isLetter }
+    }
+
+    static func buildPlayURL(from uri: String, ratio: String = "0p", line: Int = 1) -> URL? {
+        guard isPlayURI(uri),
+              var components = URLComponents(string: "https://aweme.snssdk.com/aweme/v1/play/") else {
+            return nil
+        }
+        components.queryItems = [
+            URLQueryItem(name: "video_id", value: uri.trimmingCharacters(in: .whitespacesAndNewlines)),
+            URLQueryItem(name: "ratio", value: ratio),
+            URLQueryItem(name: "line", value: String(line))
+        ]
+        return components.url
     }
 
     private static func noWatermarkVariant(of url: URL) -> URL? {
