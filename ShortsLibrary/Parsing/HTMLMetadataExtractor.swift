@@ -155,7 +155,10 @@ enum HTMLMetadataExtractor {
         let patterns = [
             #""playUrl"\s*:\s*"((?:[^"\\]|\\.)*)""#,
             #""videoUrl"\s*:\s*"((?:[^"\\]|\\.)*)""#,
-            #""play_url"\s*:\s*"((?:[^"\\]|\\.)*)""#
+            #""play_url"\s*:\s*"((?:[^"\\]|\\.)*)""#,
+            #""backupUrl"\s*:\s*\[(.*?)\]"#,
+            #""backup_url"\s*:\s*\[(.*?)\]"#,
+            #""url"\s*:\s*\[(.*?)\]"#
         ]
 
         for pattern in patterns {
@@ -181,7 +184,9 @@ enum HTMLMetadataExtractor {
             #""image"\s*:\s*\[(.*?)\]"#,
             #""pictures"\s*:\s*\[(.*?)\]"#,
             #""image_urls"\s*:\s*\[(.*?)\]"#,
-            #""url_list"\s*:\s*\[(.*?)\]"#
+            #""url_list"\s*:\s*\[(.*?)\]"#,
+            #""coverUrls"\s*:\s*\[(.*?)\]"#,
+            #""coverUrlList"\s*:\s*\[(.*?)\]"#
         ]
 
         for pattern in patterns {

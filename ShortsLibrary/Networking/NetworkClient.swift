@@ -10,17 +10,18 @@ final class NetworkClient {
         return URLSession(configuration: configuration)
     }()
 
-    private let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
-    private let searchEngineUA = "Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)"
+    static let defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+    static let mobileUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+    private static let searchEngineUA = "Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)"
 
     func html(from url: URL) async throws -> (String, URL) {
-        let initial = try await fetchHTML(from: url, userAgent: userAgent)
+        let initial = try await fetchHTML(from: url, userAgent: Self.userAgent(for: url))
 
         guard Self.needsPublicMetadata(for: initial.0, finalURL: initial.1) else {
             return initial
         }
 
-        if let fallback = try? await fetchHTML(from: url, userAgent: searchEngineUA),
+        if let fallback = try? await fetchHTML(from: url, userAgent: Self.searchEngineUA),
            fallback.0.contains("application/ld+json") || fallback.0.contains("aweme_detail") {
             return fallback
         }
@@ -53,9 +54,17 @@ final class NetworkClient {
             || (!html.contains("application/ld+json") && !html.contains("aweme_detail"))
     }
 
+    static func userAgent(for url: URL) -> String {
+        let host = url.host()?.lowercased() ?? ""
+        if host.contains("kuaishou") || host.contains("chenzhongtech") || host.contains("gifshow") {
+            return mobileUserAgent
+        }
+        return defaultUserAgent
+    }
+
     func temporaryDownload(from url: URL) async throws -> URL {
         var request = URLRequest(url: url)
-        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue(Self.userAgent(for: url), forHTTPHeaderField: "User-Agent")
 
         let (location, response) = try await session.download(for: request)
         guard let http = response as? HTTPURLResponse else {

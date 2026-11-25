@@ -164,7 +164,9 @@ final class DownloadManager {
         if host.contains("douyin") || host.contains("iesdouyin") {
             return "https://www.douyin.com/"
         }
-        if host.contains("kuaishou") || host.contains("chenzhongtech") || host.contains("gifshow") {
+        if host.contains("kuaishou") || host.contains("chenzhongtech") || host.contains("gifshow")
+            || host.contains("kwaicdn") || host.contains("kwimgs")
+            || host.contains("yximgs") || host.contains("ndcimgs") {
             return "https://www.kuaishou.com/"
         }
         if host.contains("xiaohongshu") || host.contains("xhscdn") {

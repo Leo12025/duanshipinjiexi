@@ -3,15 +3,25 @@ import Foundation
 enum LinkExtractor {
     static func firstURL(in text: String) -> URL? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let direct = URL(string: trimmed), ["http", "https"].contains(direct.scheme?.lowercased() ?? "") {
-            return direct
+        guard !trimmed.isEmpty else { return nil }
+
+        if let detected = firstDetectedURL(in: trimmed) {
+            return detected
         }
 
+        guard !trimmed.contains(where: { $0.isWhitespace || $0.isNewline }) else { return nil }
+        guard let direct = URL(string: trimmed),
+              ["http", "https"].contains(direct.scheme?.lowercased() ?? ""),
+              direct.host() != nil else { return nil }
+        return direct
+    }
+
+    private static func firstDetectedURL(in text: String) -> URL? {
         guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
             return nil
         }
-        let range = NSRange(trimmed.startIndex..., in: trimmed)
-        return detector.matches(in: trimmed, options: [], range: range)
+        let range = NSRange(text.startIndex..., in: text)
+        return detector.matches(in: text, options: [], range: range)
             .compactMap { $0.url }
             .first { ["http", "https"].contains($0.scheme?.lowercased() ?? "") }
     }

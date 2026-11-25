@@ -4,9 +4,22 @@ import XCTest
 final class ParserTests: XCTestCase {
     func testLinkExtraction() async {
         let text = "分享文案 https://www.douyin.com/video/7123456789012345678 复制打开"
-        XCTAssertEqual(LinkExtractor.firstURL(in: text)?.host(), "www.douyin.com")
+        XCTAssertEqual(
+            LinkExtractor.firstURL(in: text)?.absoluteString,
+            "https://www.douyin.com/video/7123456789012345678"
+        )
         let platform = await LinkIngestService.detectPlatform(in: text)
         XCTAssertEqual(platform, "抖音")
+    }
+
+    func testKuaishouShareTextExtraction() {
+        let text = #"""
+        https://v.kuaishou.com/KLn1EMbt 普通的一天里，也藏着不动声色的喜欢"少年感 "阳光帅气 "记录美好时光 该作品在快手被播放过2.3万次，点击链接，打开【快手】直接观看！
+        """#
+        XCTAssertEqual(
+            LinkExtractor.firstURL(in: text)?.absoluteString,
+            "https://v.kuaishou.com/KLn1EMbt"
+        )
     }
 
     func testMetadataExtraction() {
@@ -26,6 +39,26 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(metadata.author, "作者A")
         XCTAssertEqual(metadata.videoURLs.count, 1)
         XCTAssertEqual(metadata.imageURLs.count, 1)
+    }
+
+    func testKuaishouMobileUserAgent() {
+        let kuaishouURL = URL(string: "https://v.kuaishou.com/KLn1EMbt")!
+        XCTAssertEqual(NetworkClient.userAgent(for: kuaishouURL), NetworkClient.mobileUserAgent)
+
+        let douyinURL = URL(string: "https://www.douyin.com/video/1")!
+        XCTAssertEqual(NetworkClient.userAgent(for: douyinURL), NetworkClient.defaultUserAgent)
+    }
+
+    func testKuaishouMobileMetadataExtraction() {
+        let html = #"""
+        {"photoId":"3xg9pj34ceerfeu","coverUrls":[{"cdn":"p23.a.yximgs.com","url":"https://p23.a.yximgs.com/upic/2026/11/21/17/cover.jpg"}],"manifest":{"video":{"adaptationSet":[{"representation":[{"backupUrl":["https://v1.kwaicdn.com/upic/2026/11/21/17/video.mp4?pkey=abc&tt=b"]}]}]}}}
+        """#
+        let metadata = HTMLMetadataExtractor.extract(
+            html: html,
+            finalURL: URL(string: "https://m.gifshow.com/fw/photo/3xg9pj34ceerfeu")!
+        )
+        XCTAssertTrue(metadata.videoURLs.contains { $0.host() == "v1.kwaicdn.com" })
+        XCTAssertTrue(metadata.imageURLs.contains { $0.host() == "p23.a.yximgs.com" })
     }
 
     func testQualityHintFromStructuredJSON() {
