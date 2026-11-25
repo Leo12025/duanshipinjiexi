@@ -25,7 +25,7 @@ final class DownloadManager {
         taskID: UUID = UUID(),
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws {
-        let candidates = Self.fallbackCandidates(for: url)
+        let candidates = Self.fallbackCandidates(for: url.secureMediaURL)
         var lastError: Error?
 
         for (index, candidate) in candidates.enumerated() {

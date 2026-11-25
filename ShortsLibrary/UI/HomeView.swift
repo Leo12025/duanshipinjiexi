@@ -272,8 +272,7 @@ struct HomeView: View {
                     LazyHStack(spacing: 12) {
                         ForEach(recentItems) { item in
                             NavigationLink(value: item) {
-                                ItemCard(item: item)
-                                    .frame(width: 160)
+                                RecentItemCard(item: item)
                             }
                             .buttonStyle(.plain)
                         }

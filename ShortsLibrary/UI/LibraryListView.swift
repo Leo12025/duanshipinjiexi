@@ -110,9 +110,15 @@ struct LibraryListView: View {
         filteredItems.filter { selectedIDs.contains($0.id) }
     }
 
-    private var gridColumns: [GridItem] {
-        let minimum: CGFloat = sizeClass == .regular ? 150 : 108
-        return [GridItem(.adaptive(minimum: minimum), spacing: 12)]
+    private var columnCount: Int {
+        sizeClass == .regular ? 3 : 2
+    }
+
+    private func cardWidth(in containerWidth: CGFloat) -> CGFloat {
+        let spacing: CGFloat = 12
+        let horizontalPadding: CGFloat = 24
+        let available = max(0, containerWidth - horizontalPadding - spacing * CGFloat(columnCount - 1))
+        return floor(available / CGFloat(columnCount))
     }
 
     var body: some View {
@@ -133,22 +139,34 @@ struct LibraryListView: View {
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        ScrollView {
-                            LazyVGrid(columns: gridColumns, spacing: 16) {
-                                ForEach(groupedItems, id: \.title) { group in
-                                    Section {
-                                        ForEach(group.items) { item in
-                                            card(for: item)
+                        GeometryReader { geometry in
+                            ScrollView {
+                                let width = cardWidth(in: geometry.size.width)
+
+                                LazyVStack(alignment: .leading, spacing: 20) {
+                                    ForEach(groupedItems) { group in
+                                        VStack(alignment: .leading, spacing: 10) {
+                                            Text(group.title)
+                                                .font(.headline)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                                            LazyVGrid(
+                                                columns: Array(
+                                                    repeating: GridItem(.fixed(width), spacing: 12),
+                                                    count: columnCount
+                                                ),
+                                                spacing: 12
+                                            ) {
+                                                ForEach(group.items) { item in
+                                                    card(for: item, size: width)
+                                                }
+                                            }
                                         }
-                                    } header: {
-                                        Text(group.title)
-                                            .font(.headline)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(.top, 4)
                                     }
                                 }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 12)
                             }
-                            .padding(16)
                         }
                     }
                 }
@@ -258,7 +276,7 @@ struct LibraryListView: View {
     }
 
     @ViewBuilder
-    private func card(for item: LibraryItem) -> some View {
+    private func card(for item: LibraryItem, size: CGFloat) -> some View {
         if filter == .trash {
             TrashCard(item: item)
         } else if isSelecting {
@@ -269,12 +287,17 @@ struct LibraryListView: View {
                     selectedIDs.insert(item.id)
                 }
             } label: {
-                ItemCard(item: item, isSelected: selectedIDs.contains(item.id), showsDetails: false)
+                ItemCard(
+                    item: item,
+                    isSelected: selectedIDs.contains(item.id),
+                    showsDetails: false,
+                    fixedSize: size
+                )
             }
             .buttonStyle(.plain)
         } else {
             NavigationLink(value: item) {
-                ItemCard(item: item, showsDetails: false)
+                ItemCard(item: item, showsDetails: false, fixedSize: size)
                     .contextMenu {
                         Button(item.isFavorite ? "取消收藏" : "收藏") {
                             item.isFavorite.toggle()

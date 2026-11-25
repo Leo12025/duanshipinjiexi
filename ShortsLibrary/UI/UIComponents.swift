@@ -5,56 +5,24 @@ struct ItemCard: View {
     let item: LibraryItem
     var isSelected = false
     var showsDetails = true
+    var fixedSize: CGFloat? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ZStack(alignment: .topLeading) {
-                cover
-
-                if isSelected {
-                    ZStack {
-                        Color.accentColor.opacity(0.28)
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.white)
-                            .shadow(radius: 2)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                            .padding(8)
-                    }
-                }
-
-                if item.isFavorite {
-                    Image(systemName: "heart.fill")
-                        .font(.caption)
-                        .foregroundStyle(.white)
-                        .padding(6)
-                        .background(.black.opacity(0.35), in: Circle())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .padding(8)
-                }
-
-                if item.needsRetry {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .padding(6)
-                        .background(.black.opacity(0.35), in: Circle())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                        .padding(8)
-                }
-
-                if item.kindEnum == .video, let duration = item.duration, duration > 0 {
-                    Text(Self.durationText(duration))
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(.black.opacity(0.55), in: Capsule())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                        .padding(8)
+            Group {
+                if let fixedSize {
+                    coverContent
+                        .frame(width: fixedSize, height: fixedSize)
+                } else {
+                    Color.clear
+                        .aspectRatio(1, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .overlay {
+                            coverContent
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
                 }
             }
-            .aspectRatio(1, contentMode: .fill)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
@@ -76,23 +44,56 @@ struct ItemCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    @ViewBuilder
-    private var cover: some View {
-        if let file = item.coverFile, file.existsOnDisk, let image = ThumbnailCache.image(for: file.fileURL) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-        } else {
-            ZStack {
-                Color.secondary.opacity(0.12)
-                Image(systemName: item.kindEnum == .video ? "play.rectangle" : "photo.stack")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
+    private var coverContent: some View {
+        ZStack(alignment: .topLeading) {
+            MediaThumbnail(item: item)
+
+            if isSelected {
+                ZStack {
+                    Color.accentColor.opacity(0.28)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                        .shadow(radius: 2)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .padding(8)
+                }
+            }
+
+            if item.isFavorite {
+                Image(systemName: "heart.fill")
+                    .font(.caption)
+                    .foregroundStyle(.white)
+                    .padding(6)
+                    .background(.black.opacity(0.35), in: Circle())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(8)
+            }
+
+            if item.needsRetry {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .padding(6)
+                    .background(.black.opacity(0.35), in: Circle())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    .padding(8)
+            }
+
+            if item.kindEnum == .video, let duration = item.duration, duration > 0 {
+                Text(Self.durationText(duration))
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(.black.opacity(0.55), in: Capsule())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(8)
             }
         }
     }
 
-    private static func durationText(_ seconds: Double) -> String {
+    static func durationText(_ seconds: Double) -> String {
         let total = Int(seconds)
         let minutes = total / 60
         let rest = total % 60
@@ -209,5 +210,78 @@ struct EmptyStateView: View {
                     .buttonStyle(.borderedProminent)
             }
         }
+    }
+}
+
+struct RecentItemCard: View {
+    let item: LibraryItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    MediaThumbnail(item: item)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            Text(item.title)
+                .font(.caption.weight(.medium))
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 6) {
+                PlatformBadge(source: item.sourceEnum)
+                Spacer(minLength: 0)
+                if item.kindEnum == .video, let duration = item.duration, duration > 0 {
+                    Text(ItemCard.durationText(duration))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .frame(width: 150, alignment: .leading)
+    }
+}
+
+struct MediaThumbnail: View {
+    let item: LibraryItem
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                ZStack {
+                    Color.secondary.opacity(0.12)
+                    Image(systemName: item.kindEnum == .video ? "play.rectangle" : "photo.stack")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+        .task(id: item.id) {
+            image = await loadThumbnail()
+        }
+    }
+
+    private func loadThumbnail() async -> UIImage? {
+        if let cover = item.coverFile, cover.existsOnDisk,
+           let thumbnail = ThumbnailCache.image(for: cover.fileURL) {
+            return thumbnail
+        }
+        if let imageFile = item.imageFiles.first(where: { $0.existsOnDisk }),
+           let thumbnail = ThumbnailCache.image(for: imageFile.fileURL) {
+            return thumbnail
+        }
+        if let video = item.videoFile, video.existsOnDisk {
+            return await VideoThumbnailCache.image(for: video.fileURL)
+        }
+        return nil
     }
 }
