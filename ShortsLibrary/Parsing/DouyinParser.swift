@@ -5,7 +5,7 @@ struct DouyinParser: PlatformParser {
     let supportedHosts = ["douyin.com", "iesdouyin.com"]
 
     private static let detailMarkers = [
-        "aweme_detail", "awemeDetail", "item_detail", "itemInfo",
+        "aweme_detail", "aweme_details", "awemeDetail", "item_detail", "itemInfo",
         "RENDER_DATA", "_ROUTER_DATA", "_SSR_DATA"
     ]
 
@@ -16,7 +16,14 @@ struct DouyinParser: PlatformParser {
     }
 
     func parse(url: URL) async throws -> ParsedMedia {
-        let (html, finalURL) = try await PublicPageLoader.loadWithoutLoginCheck(url: url)
+        let loaded: (String, URL)
+        if let captured = try? await PublicPageLoader.loadDouyinWithCapture(url: url),
+           captured.0.localizedCaseInsensitiveContains("aweme_detail") {
+            loaded = captured
+        } else {
+            loaded = try await PublicPageLoader.loadWithoutLoginCheck(url: url)
+        }
+        let (html, finalURL) = loaded
         let metadata = HTMLMetadataExtractor.extract(html: html, finalURL: finalURL)
         let detail = extractDetail(from: html)
 
@@ -53,7 +60,7 @@ struct DouyinParser: PlatformParser {
         let videos = videoSources.map { source in
             MediaQualityHeuristic.videoCandidate(
                 for: source.url,
-                hint: metadata.videoQualityHints[source.url],
+                hint: Self.mergedHint(metadata.videoQualityHints[source.url], context: source.context),
                 sourceField: source.context,
                 prefersNoWatermark: Self.prefersNoWatermark(source.context),
                 isWatermarked: Self.isWatermarked(source.context)
@@ -100,7 +107,7 @@ struct DouyinParser: PlatformParser {
             #""aweme_id"\s*:\s*(\d+)"#
         ]
         for pattern in patterns {
-            if let id = firstCapture(pattern: pattern, in: html) {
+            if let id = Self.firstCapture(pattern: pattern, in: html) {
                 return id
             }
         }
@@ -233,7 +240,18 @@ struct DouyinParser: PlatformParser {
                     result.title = value
                 }
 
-                let nextContext = "\(context) \(lower)"
+                var nextContext = "\(context) \(lower)"
+                if ["bitrate", "bit_rate", "gear_name", "quality_type"].contains(lower) {
+                    let scalar: String
+                    if let number = child as? NSNumber {
+                        scalar = number.stringValue
+                    } else if let text = child as? String {
+                        scalar = text
+                    } else {
+                        scalar = ""
+                    }
+                    if !scalar.isEmpty { nextContext += "=\(scalar)" }
+                }
                 if let strings = child as? [String],
                    ["url_list", "urls", "image_urls", "play_url_list", "play_addr_list"].contains(lower) {
                     for value in strings {
@@ -280,7 +298,7 @@ struct DouyinParser: PlatformParser {
         if isPageHost, !path.contains("/play/") { return }
 
         if result.sourceID == nil {
-            if let value = firstCapture(pattern: #"(\d{8,})"#, in: context) {
+            if let value = Self.firstCapture(pattern: #"(\d{8,})"#, in: context) {
                 result.sourceID = value
             }
         }
@@ -345,10 +363,30 @@ struct DouyinParser: PlatformParser {
         return components.url
     }
 
+    private static func mergedHint(_ base: VideoQualityHint?, context: String) -> VideoQualityHint? {
+        let lower = context.lowercased()
+        guard lower.contains("bit_rate") || lower.contains("bitrate")
+            || lower.contains("gear_name") || lower.contains("quality_type") else { return base }
+        let bitrate = base?.bitrate
+            ?? firstCapture(pattern: #"(?:bit_?rate=)(\d{4,9})"#, in: context).flatMap(Int.init)
+        let quality = base?.quality
+            ?? firstCapture(pattern: #"(?:gear_name|quality_type)=([A-Za-z0-9_]+)"#, in: context)
+        if bitrate == nil && quality == nil { return base }
+        return VideoQualityHint(
+            width: base?.width,
+            height: base?.height,
+            bitrate: bitrate,
+            quality: quality
+        )
+    }
+
     private static func prefersNoWatermark(_ context: String) -> Bool {
         let lower = context.lowercased()
         return lower.contains("play_addr")
             || lower.contains("bitrate")
+            || lower.contains("bit_rate")
+            || lower.contains("gear_name")
+            || lower.contains("quality_type")
             || lower.contains("play_url")
             || lower.contains("video_url")
             || lower.contains("source_url")
@@ -359,7 +397,7 @@ struct DouyinParser: PlatformParser {
     private static func isWatermarked(_ context: String) -> Bool {
         let lower = context.lowercased()
         let hasWatermarkSource = lower.contains("download") || lower.contains("watermark")
-        let hasCleanSource = lower.contains("play_addr") || lower.contains("bitrate")
+        let hasCleanSource = lower.contains("play_addr") || lower.contains("bitrate") || lower.contains("bit_rate")
         return hasWatermarkSource && !hasCleanSource
     }
 
@@ -387,7 +425,7 @@ struct DouyinParser: PlatformParser {
         return order.compactMap { best[$0] }
     }
 
-    private func firstCapture(pattern: String, in text: String) -> String? {
+    private static func firstCapture(pattern: String, in text: String) -> String? {
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
         let ns = text as NSString
         let range = NSRange(location: 0, length: ns.length)

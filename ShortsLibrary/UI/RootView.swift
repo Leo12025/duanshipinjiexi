@@ -60,9 +60,8 @@ struct RootView: View {
             Button("去解析") {
                 guard let link = detectedLink else { return }
                 detectedLink = nil
-                homeInput = link
-                homeResetID = UUID()
                 selectedTab = 0
+                Task { await ingestDirectly(url: link) }
             }
         } message: {
             Text(detectedLink?.absoluteString ?? "")
@@ -86,12 +85,21 @@ struct RootView: View {
         }
         .onOpenURL { url in
             if let target = Self.extractURL(from: url) {
-                homeInput = target
-                homeResetID = UUID()
                 selectedTab = 0
+                Task { await ingestDirectly(url: target) }
             } else {
                 alertMessage = "无法识别打开的链接"
             }
+        }
+    }
+
+    private func ingestDirectly(url: URL) async {
+        alertMessage = "正在解析链接..."
+        do {
+            let outcome = try await LinkIngestService.ingest(url: url, modelContext: modelContext)
+            alertMessage = outcome.message
+        } catch {
+            alertMessage = error.localizedDescription
         }
     }
 

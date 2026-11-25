@@ -22,15 +22,28 @@ enum PublicPageLoader {
 
     static func loadWithoutLoginCheck(url: URL) async throws -> (String, URL) {
         let result = try await loadPage(url: url)
-        let lower = result.0.lowercased()
+        try ensureNotBlocked(html: result.0, url: url)
+        return result
+    }
 
+    static func loadDouyinWithCapture(url: URL) async throws -> (String, URL) {
+        let result = try await WebViewPageLoader.loadDetailed(from: url)
+        var html = result.html
+        if !result.capturedJSON.isEmpty {
+            html += result.capturedJSON.map { "<script>\($0)</script>" }.joined()
+        }
+        try ensureNotBlocked(html: html, url: result.url)
+        return (html, result.url)
+    }
+
+    private static func ensureNotBlocked(html: String, url: URL) throws {
+        let lower = html.lowercased()
         if rateLimitKeywords.contains(where: { lower.contains($0) }) {
             throw AppError.rateLimited
         }
         if verificationMarkers.contains(where: { lower.contains($0) }) {
             throw AppError.verificationRequired(platformName(for: url))
         }
-        return result
     }
 
     static func requiresLogin(html: String) -> Bool {

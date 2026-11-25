@@ -141,6 +141,19 @@ final class ParserTests: XCTestCase {
         })
     }
 
+    func testDouyinBitrateSourcesExtraction() {
+        let html = #"""
+        <script>{"aweme_detail":{"video":{"bit_rate":[{"bitrate":4000000,"gear_name":"1080p","play_addr":{"url_list":["https://v3-web.douyinvod.com/video/1080.mp4"]}},{"bitrate":1000000,"gear_name":"720p","play_addr":{"url_list":["https://v3-web.douyinvod.com/video/720.mp4"]}}]}}}</script>
+        """#
+        let detail = DouyinParser().extractDetail(from: html)
+        let bitrateSources = detail.videos.filter { $0.context.contains("bit_rate") }
+        XCTAssertEqual(bitrateSources.count, 2)
+        XCTAssertTrue(bitrateSources.contains { $0.context.contains("bitrate=4000000") })
+        XCTAssertTrue(bitrateSources.contains {
+            $0.url.absoluteString.contains("1080.mp4") && $0.context.contains("gear_name=1080p")
+        })
+    }
+
     func testQualityHintFromStructuredJSON() {
         let html = #"""
         {"url":"https://cdn.example.com/video.mp4","width":1920,"height":1080,"bitrate":3000000}
