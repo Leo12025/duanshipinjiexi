@@ -37,6 +37,7 @@ enum FollowListService {
         case .kuaishou: return .kuaishou
         case .xiaohongshu: return .xiaohongshu
         case .bilibili: return .bilibili
+        case .wechatChannels: return .wechatChannels
         }
     }
 

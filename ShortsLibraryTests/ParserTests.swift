@@ -208,6 +208,53 @@ final class ParserTests: XCTestCase {
         )
     }
 
+    func testWechatChannelsRecognitionAndSourceID() {
+        let shortURL = URL(string: "https://weixin.qq.com/sph/AbC_123456")!
+        XCTAssertEqual(ParserRegistry.parser(for: shortURL)?.source, .wechatChannels)
+        XCTAssertEqual(
+            WechatChannelsParser.extractSourceID(from: shortURL, html: ""),
+            "AbC_123456"
+        )
+
+        let previewURL = URL(string: "https://channels.weixin.qq.com/finder-preview/xyz987654")!
+        XCTAssertEqual(
+            WechatChannelsParser.extractSourceID(from: previewURL, html: ""),
+            "xyz987654"
+        )
+    }
+
+    func testWechatChannelsMetadataExtraction() {
+        let html = #"""
+        <html>
+          <meta property="og:title" content="视频号标题">
+          <meta property="og:video" content="https://finder.video.qq.com/abc/video.mp4">
+          <meta property="og:image" content="https://finder.video.qq.com/abc/cover.jpg">
+        </html>
+        """#
+        let metadata = HTMLMetadataExtractor.extract(
+            html: html,
+            finalURL: URL(string: "https://weixin.qq.com/sph/AbC_123456")!
+        )
+        XCTAssertEqual(metadata.title, "视频号标题")
+        XCTAssertTrue(metadata.videoURLs.contains {
+            $0.host() == "finder.video.qq.com" && $0.pathExtension == "mp4"
+        })
+        XCTAssertTrue(metadata.imageURLs.contains {
+            $0.host() == "finder.video.qq.com" && $0.pathExtension == "jpg"
+        })
+    }
+
+    func testWechatChannelsFeedInfoExtraction() {
+        let html = #"""
+        <script>{"data":{"authorInfo":{"nickname":"江西软件职业技术大学"},"feedInfo":{"description":"慌啥子嘛，慢慢来","coverUrl":"https://finder.video.qq.com/251/20304/stodownload?encfilekey=abc&scene=2&picformat=200"}}}</script>
+        """#
+        let info = WechatChannelsParser.extractFeedInfo(from: html)
+        XCTAssertEqual(info.author, "江西软件职业技术大学")
+        XCTAssertEqual(info.description, "慌啥子嘛，慢慢来")
+        XCTAssertEqual(info.coverURL?.host(), "finder.video.qq.com")
+        XCTAssertTrue(info.videoURLs.isEmpty)
+    }
+
     func testKindResolution() {
         XCTAssertEqual(MediaKindResolver.resolve(videos: 1, images: 0, audios: 0), .video)
         XCTAssertEqual(MediaKindResolver.resolve(videos: 0, images: 1, audios: 0), .image)

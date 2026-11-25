@@ -266,6 +266,12 @@ enum HTMLMetadataExtractor {
             && (path.isEmpty || path == "/") { return false }
         if (host.contains("snssdk") || host.contains("ixigua"))
             && (path.contains("/play/") || path.contains("/video/")) { return true }
+        if host.contains("video.qq.com") {
+            let full = url.absoluteString.lowercased()
+            return path.contains("/video")
+                || ["mp4", "m3u8", "mov"].contains(ext)
+                || full.contains("mime_type=video")
+        }
         return ["mp4", "m3u8", "mov"].contains(ext)
             || host.contains("bilivideo")
             || host.contains("sns-video")

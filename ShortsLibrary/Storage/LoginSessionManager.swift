@@ -7,6 +7,7 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
     case kuaishou
     case xiaohongshu
     case bilibili
+    case wechatChannels
 
     var id: String { rawValue }
 
@@ -16,6 +17,7 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
         case .kuaishou: return "快手"
         case .xiaohongshu: return "小红书"
         case .bilibili: return "B站"
+        case .wechatChannels: return "视频号"
         }
     }
 
@@ -25,6 +27,7 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
         case .kuaishou: return URL(string: "https://www.kuaishou.com/")!
         case .xiaohongshu: return URL(string: "https://www.xiaohongshu.com/")!
         case .bilibili: return URL(string: "https://passport.bilibili.com/login")!
+        case .wechatChannels: return URL(string: "https://channels.weixin.qq.com/")!
         }
     }
 
@@ -34,6 +37,7 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
         case .kuaishou: return URL(string: "https://www.kuaishou.com/profile")!
         case .xiaohongshu: return URL(string: "https://www.xiaohongshu.com/user/profile")!
         case .bilibili: return URL(string: "https://account.bilibili.com/account/home")!
+        case .wechatChannels: return URL(string: "https://channels.weixin.qq.com/")!
         }
     }
 
@@ -43,6 +47,7 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
         case .kuaishou: return "kuaishou.com"
         case .xiaohongshu: return "xiaohongshu.com"
         case .bilibili: return "bilibili.com"
+        case .wechatChannels: return "weixin.qq.com"
         }
     }
 
@@ -52,6 +57,7 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
         case .kuaishou: return ["chenzhongtech.com", "gifshow.com"]
         case .xiaohongshu: return ["xhslink.com", "xhslink.cn"]
         case .bilibili: return ["b23.tv"]
+        case .wechatChannels: return ["channels.weixin.qq.com", "finder.video.qq.com", "video.qq.com"]
         }
     }
 
@@ -61,6 +67,7 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
         case .kuaishou: return ["userid", "token", "session"]
         case .xiaohongshu: return ["web_session", "session"]
         case .bilibili: return ["sessdata", "bili_jct", "dedeuserid"]
+        case .wechatChannels: return ["session", "token", "auth", "uin", "passport"]
         }
     }
 
@@ -70,6 +77,7 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
         case .kuaishou: return "bolt"
         case .xiaohongshu: return "book"
         case .bilibili: return "tv"
+        case .wechatChannels: return "play.tv"
         }
     }
 }

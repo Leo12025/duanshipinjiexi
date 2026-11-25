@@ -174,6 +174,9 @@ final class DownloadManager {
         if host.contains("xiaohongshu") || host.contains("xhscdn") {
             return "https://www.xiaohongshu.com/"
         }
+        if host.contains("weixin.qq.com") || host.contains("video.qq.com") {
+            return "https://channels.weixin.qq.com/"
+        }
         return nil
     }
 }

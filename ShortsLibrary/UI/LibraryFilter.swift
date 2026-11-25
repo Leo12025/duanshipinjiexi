@@ -6,6 +6,7 @@ enum LibraryFilter: String, CaseIterable, Identifiable {
     case kuaishou
     case xiaohongshu
     case bilibili
+    case wechatChannels
     case video
     case image
     case imageText
@@ -23,6 +24,7 @@ enum LibraryFilter: String, CaseIterable, Identifiable {
         case .kuaishou: return "快手"
         case .xiaohongshu: return "小红书"
         case .bilibili: return "B站"
+        case .wechatChannels: return "视频号"
         case .video: return "视频"
         case .image: return "图片"
         case .imageText: return "图文"
@@ -40,6 +42,7 @@ enum LibraryFilter: String, CaseIterable, Identifiable {
         case .kuaishou: return "bolt"
         case .xiaohongshu: return "book"
         case .bilibili: return "tv"
+        case .wechatChannels: return "play.tv"
         case .video: return "video"
         case .image: return "photo"
         case .imageText: return "photo.stack"

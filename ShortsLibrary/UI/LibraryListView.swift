@@ -57,6 +57,8 @@ struct LibraryListView: View {
             result = activeItems.filter { $0.sourceEnum == .xiaohongshu }
         case .bilibili:
             result = activeItems.filter { $0.sourceEnum == .bilibili }
+        case .wechatChannels:
+            result = activeItems.filter { $0.sourceEnum == .wechatChannels }
         case .video:
             result = activeItems.filter { $0.kindEnum == .video }
         case .image:

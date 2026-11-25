@@ -264,6 +264,7 @@ extension MediaSource {
         case .kuaishou: return "bolt"
         case .xiaohongshu: return "book"
         case .bilibili: return "tv"
+        case .wechatChannels: return "play.tv"
         }
     }
 }

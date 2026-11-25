@@ -56,7 +56,8 @@ final class NetworkClient {
 
     static func userAgent(for url: URL) -> String {
         let host = url.host()?.lowercased() ?? ""
-        if host.contains("kuaishou") || host.contains("chenzhongtech") || host.contains("gifshow") {
+        if host.contains("kuaishou") || host.contains("chenzhongtech") || host.contains("gifshow")
+            || host.contains("weixin.qq.com") || host.contains("video.qq.com") {
             return mobileUserAgent
         }
         return defaultUserAgent

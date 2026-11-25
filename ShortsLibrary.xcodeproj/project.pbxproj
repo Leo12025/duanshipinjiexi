@@ -231,6 +231,7 @@
         "3EB0B0E34C09D58325BF4641",
         "51B5DA6E247BD4042705B61D",
         "CF14FBA43ADE2E698F1C1B4B",
+        "DCE42B6C2982AEFEA8A76949",
         "1A52AC526FC303325862A5B4"
       ],
       "name": "Parsing",
@@ -336,6 +337,16 @@
     "6DB038BF53440836D2E08FE0": {
       "isa": "PBXBuildFile",
       "fileRef": "CF14FBA43ADE2E698F1C1B4B"
+    },
+    "DCE42B6C2982AEFEA8A76949": {
+      "isa": "PBXFileReference",
+      "lastKnownFileType": "sourcecode.swift",
+      "path": "WechatChannelsParser.swift",
+      "sourceTree": "<group>"
+    },
+    "6CB40CCD4D75F23C1FE28217": {
+      "isa": "PBXBuildFile",
+      "fileRef": "DCE42B6C2982AEFEA8A76949"
     },
     "1A52AC526FC303325862A5B4": {
       "isa": "PBXFileReference",
@@ -799,6 +810,7 @@
         "8C34E06FE0619FC203B1CE65",
         "69B59DD02AD7829B71EE42E0",
         "6DB038BF53440836D2E08FE0",
+        "6CB40CCD4D75F23C1FE28217",
         "A0E568706199D742CE2A00FF",
         "E8AF96630BD6715703262341",
         "F61DEF4DAA5D380D16D61CAC",

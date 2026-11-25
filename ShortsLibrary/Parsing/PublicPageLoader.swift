@@ -36,6 +36,16 @@ enum PublicPageLoader {
         return (html, result.url)
     }
 
+    static func loadWechatChannelsWithCapture(url: URL) async throws -> (String, URL) {
+        let result = try await WebViewPageLoader.loadDetailed(from: url)
+        var html = result.html
+        if !result.capturedJSON.isEmpty {
+            html += result.capturedJSON.map { "<script>\($0)</script>" }.joined()
+        }
+        try ensureNotBlocked(html: html, url: result.url)
+        return (html, result.url)
+    }
+
     private static func ensureNotBlocked(html: String, url: URL) throws {
         let lower = html.lowercased()
         if rateLimitKeywords.contains(where: { lower.contains($0) }) {
@@ -52,7 +62,8 @@ enum PublicPageLoader {
     }
 
     private static func loadPage(url: URL) async throws -> (String, URL) {
-        let shouldPreferWebView = await LoginSessionManager.shared.isLoggedIn(for: url) || isDouyin(url)
+        let shouldPreferWebView = await LoginSessionManager.shared.isLoggedIn(for: url)
+            || isDouyin(url) || isWechatChannels(url)
         if shouldPreferWebView,
            let result = try? await WebViewPageLoader.load(from: url),
            isUsable(result.0),
@@ -72,6 +83,12 @@ enum PublicPageLoader {
         let host = url.host()?.lowercased() ?? ""
         return host == "douyin.com" || host.hasSuffix(".douyin.com")
             || host == "iesdouyin.com" || host.hasSuffix(".iesdouyin.com")
+    }
+
+    private static func isWechatChannels(_ url: URL) -> Bool {
+        let host = url.host()?.lowercased() ?? ""
+        return host == "weixin.qq.com" || host.hasSuffix(".weixin.qq.com")
+            || host == "video.qq.com" || host.hasSuffix(".video.qq.com")
     }
 
     private static func isUsable(_ html: String) -> Bool {

@@ -5,6 +5,7 @@ enum MediaSource: String, CaseIterable, Identifiable {
     case kuaishou
     case xiaohongshu
     case bilibili
+    case wechatChannels
 
     var id: String { rawValue }
 
@@ -14,6 +15,7 @@ enum MediaSource: String, CaseIterable, Identifiable {
         case .kuaishou: return "快手"
         case .xiaohongshu: return "小红书"
         case .bilibili: return "B站"
+        case .wechatChannels: return "视频号"
         }
     }
 }

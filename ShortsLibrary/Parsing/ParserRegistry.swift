@@ -5,7 +5,8 @@ enum ParserRegistry {
         DouyinParser(),
         KuaishouParser(),
         XiaohongshuParser(),
-        BilibiliParser()
+        BilibiliParser(),
+        WechatChannelsParser()
     ]
 
     static func parser(for url: URL) -> (any PlatformParser)? {
