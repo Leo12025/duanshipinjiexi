@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -32,6 +33,68 @@ def add(object_id: str, **fields) -> None:
     objects[object_id] = fields
 
 
+PRESERVED_KEYS = (
+    "DEVELOPMENT_TEAM",
+    "PRODUCT_BUNDLE_IDENTIFIER",
+    "CODE_SIGN_STYLE",
+    "PROVISIONING_PROFILE_SPECIFIER",
+)
+
+
+def load_existing_settings() -> dict[tuple[str, str], dict]:
+    path = PROJECT_DIR / "project.pbxproj"
+    if not path.exists():
+        return {}
+    try:
+        raw = subprocess.check_output(
+            ["plutil", "-convert", "json", "-o", "-", str(path)],
+            stderr=subprocess.DEVNULL,
+        )
+        data = json.loads(raw)
+        existing = data["objects"]
+        root = existing[data["rootObject"]]
+    except (OSError, subprocess.CalledProcessError, KeyError, json.JSONDecodeError):
+        return {}
+
+    def settings_of(config_list_id: str) -> dict[str, dict]:
+        result = {}
+        config_list = existing.get(config_list_id, {})
+        for config_id in config_list.get("buildConfigurations", []):
+            config = existing.get(config_id, {})
+            name = config.get("name")
+            if not name:
+                continue
+            result[name] = {
+                key: value
+                for key, value in config.get("buildSettings", {}).items()
+                if key in PRESERVED_KEYS and value not in ("", None)
+            }
+        return result
+
+    preserved = {}
+    for name, settings in settings_of(root.get("buildConfigurationList")).items():
+        preserved[("__project__", name)] = settings
+    for target_id in root.get("targets", []):
+        target = existing.get(target_id, {})
+        target_name = target.get("name")
+        if not target_name:
+            continue
+        for name, settings in settings_of(target.get("buildConfigurationList")).items():
+            preserved[(target_name, name)] = settings
+    return preserved
+
+
+def apply_preserved(
+    target_name: str, config_name: str, settings: dict, preserved: dict
+) -> None:
+    for key in PRESERVED_KEYS:
+        value = preserved.get((target_name, config_name), {}).get(key)
+        if value not in (None, ""):
+            settings[key] = value
+
+
+existing_settings = load_existing_settings()
+
 project_id = ident("object:project")
 main_group = ident("object:group.main")
 sources_group = ident("object:group.sources")
@@ -62,40 +125,97 @@ app_product_test_build = ident("build:app.product.for.tests")
 target_dependency_id = ident("dependency:tests.to.app")
 container_proxy_id = ident("proxy:tests.to.app")
 
+SOURCE_DIR_NAME = SOURCE_ROOT.name
+TEST_DIR_NAME = TEST_ROOT.name
+group_registry: dict[tuple[str, str], str] = {}
+
+
+def nested_group(parent_id: str, parts: tuple[str, ...]) -> str:
+    current = parent_id
+    for part in parts:
+        key = (current, part)
+        child_id = group_registry.get(key)
+        if child_id is None:
+            child_id = ident(f"group:{current}:{part}")
+            add(
+                child_id,
+                isa="PBXGroup",
+                children=[],
+                name=part,
+                path=part,
+                sourceTree="<group>",
+            )
+            objects[current]["children"].append(child_id)
+            group_registry[key] = child_id
+        current = child_id
+    return current
+
+
+add(
+    main_group,
+    isa="PBXGroup",
+    children=[sources_group, test_group, products_group],
+    sourceTree="<group>",
+)
+add(
+    sources_group,
+    isa="PBXGroup",
+    children=[],
+    name=SOURCE_DIR_NAME,
+    path=SOURCE_DIR_NAME,
+    sourceTree="<group>",
+)
+add(
+    test_group,
+    isa="PBXGroup",
+    children=[],
+    name=TEST_DIR_NAME,
+    path=TEST_DIR_NAME,
+    sourceTree="<group>",
+)
+add(
+    products_group,
+    isa="PBXGroup",
+    children=[product_ref, test_product_ref],
+    name="Products",
+    sourceTree="<group>",
+)
+
 source_ids = []
 test_source_ids = []
-test_group_children = []
 resource_ids = []
-group_children = []
 
 for rel in swift_files:
     ref = ident("file:" + rel)
     build = ident("build:" + rel)
-    name = Path(rel).name
+    rel_path = Path(rel).relative_to(SOURCE_DIR_NAME)
     add(
         ref,
         isa="PBXFileReference",
         lastKnownFileType="sourcecode.swift",
-        path=rel,
-        sourceTree="SOURCE_ROOT",
+        path=rel_path.name,
+        sourceTree="<group>",
     )
     add(build, isa="PBXBuildFile", fileRef=ref)
     source_ids.append(build)
-    group_children.append(ref)
+    parent = nested_group(sources_group, rel_path.parent.parts)
+    objects[parent]["children"].append(ref)
 
 for rel in test_swift_files:
     ref = ident("file:" + rel)
     build = ident("build:" + rel)
+    rel_path = Path(rel).relative_to(TEST_DIR_NAME)
     add(
         ref,
         isa="PBXFileReference",
         lastKnownFileType="sourcecode.swift",
-        path=rel,
-        sourceTree="SOURCE_ROOT",
+        path=rel_path.name,
+        sourceTree="<group>",
     )
     add(build, isa="PBXBuildFile", fileRef=ref)
     test_source_ids.append(build)
-    test_group_children.append(ref)
+    parent = nested_group(test_group, rel_path.parent.parts)
+    objects[parent]["children"].append(ref)
 
 asset_ref = ident("file:" + asset_path)
 asset_build = ident("build:" + asset_path)
@@ -103,12 +223,12 @@ add(
     asset_ref,
     isa="PBXFileReference",
     lastKnownFileType="folder.assetcatalog",
-    path=asset_path,
-    sourceTree="SOURCE_ROOT",
+    path=Path(asset_path).name,
+    sourceTree="<group>",
 )
 add(asset_build, isa="PBXBuildFile", fileRef=asset_ref)
 resource_ids.append(asset_build)
-group_children.append(asset_ref)
+objects[sources_group]["children"].append(asset_ref)
 
 privacy_ref = ident("file:" + privacy_path)
 privacy_build = ident("build:" + privacy_path)
@@ -116,22 +236,22 @@ add(
     privacy_ref,
     isa="PBXFileReference",
     lastKnownFileType="text.plist.xml",
-    path=privacy_path,
-    sourceTree="SOURCE_ROOT",
+    path=Path(privacy_path).name,
+    sourceTree="<group>",
 )
 add(privacy_build, isa="PBXBuildFile", fileRef=privacy_ref)
 resource_ids.append(privacy_build)
-group_children.append(privacy_ref)
+objects[sources_group]["children"].append(privacy_ref)
 
 info_ref = ident("file:" + info_path)
 add(
     info_ref,
     isa="PBXFileReference",
     lastKnownFileType="text.plist.xml",
-    path=info_path,
-    sourceTree="SOURCE_ROOT",
+    path=Path(info_path).name,
+    sourceTree="<group>",
 )
-group_children.append(info_ref)
+objects[sources_group]["children"].append(info_ref)
 
 add(
     product_ref,
@@ -160,34 +280,6 @@ add(
 )
 add(xctest_build, isa="PBXBuildFile", fileRef=xctest_ref)
 add(app_product_test_build, isa="PBXBuildFile", fileRef=product_ref)
-
-add(
-    main_group,
-    isa="PBXGroup",
-    children=[sources_group, test_group, products_group],
-    sourceTree="<group>",
-)
-add(
-    sources_group,
-    isa="PBXGroup",
-    children=group_children,
-    name="Sources",
-    sourceTree="<group>",
-)
-add(
-    test_group,
-    isa="PBXGroup",
-    children=test_group_children,
-    name="Tests",
-    sourceTree="<group>",
-)
-add(
-    products_group,
-    isa="PBXGroup",
-    children=[product_ref, test_product_ref],
-    name="Products",
-    sourceTree="<group>",
-)
 
 add(
     frameworks_phase,
@@ -317,6 +409,14 @@ release_settings.update(
     }
 )
 
+for target_name, config_name, settings in [
+    ("__project__", "Debug", debug_settings),
+    ("__project__", "Release", release_settings),
+    ("ShortsLibrary", "Debug", debug_settings),
+    ("ShortsLibrary", "Release", release_settings),
+]:
+    apply_preserved(target_name, config_name, settings, existing_settings)
+
 test_overrides = {
     "GENERATE_INFOPLIST_FILE": "YES",
     "PRODUCT_BUNDLE_IDENTIFIER": "com.leo.shortslibrary.tests",
@@ -327,6 +427,12 @@ test_debug_settings = dict(debug_settings)
 test_debug_settings.update(test_overrides)
 test_release_settings = dict(release_settings)
 test_release_settings.update(test_overrides)
+
+for config_name, settings in [
+    ("Debug", test_debug_settings),
+    ("Release", test_release_settings),
+]:
+    apply_preserved("ShortsLibraryTests", config_name, settings, existing_settings)
 
 for config_id, name, settings in [
     (project_debug, "Debug", debug_settings),
