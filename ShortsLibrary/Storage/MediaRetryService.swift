@@ -116,7 +116,10 @@ enum MediaRetryService {
                 let filename = String(format: "images/%02d.%@", index + 1, ext.isEmpty ? "jpg" : ext)
                 let relative = AppPaths.relativePath(source: item.source, sourceId: item.sourceId, filename: filename)
                 let destination = AppPaths.root.appendingPathComponent(relative)
-                if item.files.contains(where: { $0.relativePath == relative && $0.existsOnDisk }) { continue }
+                let imageRoles = [FileRole.image.rawValue, FileRole.imageOriginal.rawValue, FileRole.imageSegment.rawValue]
+                if item.files.contains(where: {
+                    imageRoles.contains($0.role) && $0.orderIndex / 100 == index && $0.existsOnDisk
+                }) { continue }
 
                 DownloadQueue.shared.enqueue(
                     url: url,
@@ -288,8 +291,10 @@ enum MediaRetryService {
             )
             let destination = AppPaths.root.appendingPathComponent(relative)
 
-            if let existing = item.files.first(where: { $0.relativePath == relative }),
-               existing.existsOnDisk { continue }
+            let imageRoles = [FileRole.image.rawValue, FileRole.imageOriginal.rawValue, FileRole.imageSegment.rawValue]
+            if item.files.contains(where: {
+                imageRoles.contains($0.role) && $0.orderIndex / 100 == index && $0.existsOnDisk
+            }) { continue }
 
             do {
                 try await MediaDownloader.download(url: url, to: destination)
@@ -310,6 +315,11 @@ enum MediaRetryService {
         guard item.needsAudioMux,
               let audioString = item.sourceAudioURLString,
               let audioURL = URL(string: audioString) else { return }
+
+        if await MediaDownloader.hasAudioTrack(at: video) {
+            item.needsAudioMux = false
+            return
+        }
 
         let directory = destination.deletingLastPathComponent()
         let temporaryAudio = directory.appendingPathComponent("audio-source.m4a")

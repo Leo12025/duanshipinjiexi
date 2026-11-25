@@ -95,11 +95,6 @@ struct ProfileView: View {
                 await login.refresh()
                 await refreshNotificationStatus()
             }
-            .onReceive(NotificationCenter.default.publisher(for: .openPlatformLogin)) { output in
-                if let platform = output.object as? PlatformLogin {
-                    loginPlatform = platform
-                }
-            }
         }
     }
 

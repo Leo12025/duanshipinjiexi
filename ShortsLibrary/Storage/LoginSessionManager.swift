@@ -140,13 +140,26 @@ final class LoginSessionManager: ObservableObject {
         guard !host.isEmpty else { return nil }
         let cookies = await allCookies()
         let now = Date()
+        let platform = PlatformLogin.allCases.first { item in
+            host == item.cookieDomain
+                || host.hasSuffix(".\(item.cookieDomain)")
+                || item.extraHosts.contains(host)
+        }
+        let allowedKeywords = platform?.sessionCookieKeywords ?? []
         let matched = cookies.filter { cookie in
             if let expires = cookie.expiresDate, expires < now { return false }
             let domain = cookie.domain
                 .lowercased()
                 .trimmingCharacters(in: CharacterSet(charactersIn: "."))
             guard !domain.isEmpty else { return false }
-            return host == domain || host.hasSuffix(".\(domain)")
+            guard host == domain || host.hasSuffix(".\(domain)") else { return false }
+            if cookie.isSecure && url.scheme?.lowercased() != "https" { return false }
+            guard url.path.hasPrefix(cookie.path) else { return false }
+            if !allowedKeywords.isEmpty {
+                let name = cookie.name.lowercased()
+                guard allowedKeywords.contains(where: { name.contains($0.lowercased()) }) else { return false }
+            }
+            return true
         }
         guard !matched.isEmpty else { return nil }
         return matched.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")

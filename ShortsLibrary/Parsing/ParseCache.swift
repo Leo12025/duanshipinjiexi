@@ -58,6 +58,6 @@ enum ParseCache {
     }
 
     private static func cacheKey(url: URL, loggedIn: Bool) -> String {
-        "\(url.absoluteString)|\(loggedIn ? "auth" : "public")"
+        "\(url.normalizedCacheKey)|\(loggedIn ? "auth" : "public")"
     }
 }

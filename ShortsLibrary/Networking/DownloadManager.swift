@@ -25,7 +25,7 @@ final class DownloadManager {
         taskID: UUID = UUID(),
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws {
-        let candidates = Self.fallbackCandidates(for: url.secureMediaURL)
+        let candidates = Self.fallbackCandidates(for: url)
         var lastError: Error?
 
         for (index, candidate) in candidates.enumerated() {
@@ -38,8 +38,11 @@ final class DownloadManager {
                     progress: progress
                 )
                 return
-            } catch AppError.badStatus(404) where index < candidates.count - 1 {
-                lastError = AppError.badStatus(404)
+            } catch let error as AppError where index < candidates.count - 1
+                        && (index == 0 || Self.isFallbackWorthy(error)) {
+                lastError = error
+            } catch where index == 0 && index < candidates.count - 1 {
+                lastError = error
             }
         }
 
@@ -110,33 +113,42 @@ final class DownloadManager {
         progress?(1)
     }
 
+    private static func isFallbackWorthy(_ error: AppError) -> Bool {
+        guard case AppError.badStatus(let status) = error else { return false }
+        return status == 404 || status == 403 || status >= 500
+    }
+
     private static func fallbackCandidates(for url: URL) -> [URL] {
-        guard let host = url.host()?.lowercased(),
-              host.contains("douyinpic") || host.contains("byteimg") else {
-            return [url]
+        var candidates: [URL] = []
+        var seen: Set<String> = []
+
+        func append(_ candidate: URL) {
+            guard seen.insert(candidate.absoluteString).inserted else { return }
+            candidates.append(candidate)
         }
 
-        let absolute = url.absoluteString
-        let parts = absolute.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
-        let base = String(parts.first ?? "")
-        let query = parts.count > 1 ? String(parts[1]) : ""
+        for candidate in url.protocolCandidates {
+            append(candidate)
 
-        guard let templateRange = base.range(of: "~tplv-") else { return [url] }
-        let originalBase = String(base[..<templateRange.lowerBound])
+            let host = candidate.host()?.lowercased() ?? ""
+            guard host.contains("douyinpic") || host.contains("byteimg") else { continue }
 
-        func makeURL(_ candidateBase: String) -> URL? {
-            let candidate = query.isEmpty ? candidateBase : "\(candidateBase)?\(query)"
-            guard let candidateURL = URL(string: candidate), candidateURL != url else { return nil }
-            return candidateURL
+            let absolute = candidate.absoluteString
+            let parts = absolute.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+            let base = String(parts.first ?? "")
+            let query = parts.count > 1 ? String(parts[1]) : ""
+            guard let templateRange = base.range(of: "~tplv-") else { continue }
+            let originalBase = String(base[..<templateRange.lowerBound])
+
+            func makeURL(_ candidateBase: String) -> URL? {
+                let value = query.isEmpty ? candidateBase : "\(candidateBase)?\(query)"
+                return URL(string: value)
+            }
+
+            if let original = makeURL(originalBase) { append(original) }
+            if let object = makeURL(originalBase + "~tplv-obj.image") { append(object) }
         }
 
-        var candidates = [url]
-        if let original = makeURL(originalBase) {
-            candidates.append(original)
-        }
-        if let object = makeURL(originalBase + "~tplv-obj.image") {
-            candidates.append(object)
-        }
         return candidates
     }
 
@@ -330,12 +342,16 @@ private final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegat
               let destination = URL(string: stored.destination),
               let partial = URL(string: stored.partial) else { return nil }
 
-        return State(
+        let restored = State(
             destination: destination,
             partialURL: partial,
             baseOffset: stored.baseOffset,
             shouldRange: stored.shouldRange
         )
+        lock.lock()
+        states[identifier] = restored
+        lock.unlock()
+        return restored
     }
 
     private func finish(
@@ -343,21 +359,29 @@ private final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegat
         with result: Result<(URL, HTTPURLResponse), Error>
     ) {
         lock.lock()
-        guard var state = states[task.taskIdentifier], !state.finished else {
+        var currentState = states[task.taskIdentifier]
+        lock.unlock()
+
+        if currentState == nil {
+            currentState = state(for: task.taskIdentifier)
+        }
+
+        lock.lock()
+        guard var resolved = currentState, !resolved.finished else {
             lock.unlock()
             defaults.removeObject(forKey: key(for: task.taskIdentifier))
             return
         }
-        state.finished = true
+        resolved.finished = true
         states[task.taskIdentifier] = nil
         lock.unlock()
         defaults.removeObject(forKey: key(for: task.taskIdentifier))
 
         switch result {
         case .success(let value):
-            state.continuation?.resume(returning: value)
+            resolved.continuation?.resume(returning: value)
         case .failure(let error):
-            state.continuation?.resume(throwing: error)
+            resolved.continuation?.resume(throwing: error)
         }
     }
 

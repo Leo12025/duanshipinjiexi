@@ -10,6 +10,7 @@ enum AppError: LocalizedError {
     case loginRequired(String)
     case rateLimited
     case platformChanged(String)
+    case verificationRequired(String)
 
     var errorDescription: String? {
         switch self {
@@ -31,6 +32,8 @@ enum AppError: LocalizedError {
             return "平台请求过于频繁，请稍后再试"
         case .platformChanged(let platform):
             return "\(platform)页面结构可能已变化，暂未能提取媒体，请稍后重试"
+        case .verificationRequired(let platform):
+            return "\(platform)需要完成页面验证，请在 App 内打开并完成验证后重试"
         }
     }
 }

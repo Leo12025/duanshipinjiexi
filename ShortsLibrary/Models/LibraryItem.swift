@@ -101,11 +101,11 @@ final class LibraryItem {
 
     var needsRetry: Bool {
         if downloadFailed { return true }
-        if kindEnum == .video, sourceVideoURLString != nil, videoFile == nil { return true }
-        if kindEnum == .audio, sourceAudioURLString != nil, audioFile == nil { return true }
+        if kindEnum == .video, sourceVideoURLString != nil, videoFile?.existsOnDisk != true { return true }
+        if kindEnum == .audio, sourceAudioURLString != nil, audioFile?.existsOnDisk != true { return true }
         if [.image, .imageText, .dynamic].contains(kindEnum),
            !sourceImageURLStrings.isEmpty,
-           imageFiles.isEmpty { return true }
+           !imageFiles.contains(where: { $0.existsOnDisk }) { return true }
         return false
     }
 }

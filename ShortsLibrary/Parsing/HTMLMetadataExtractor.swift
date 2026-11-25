@@ -153,7 +153,6 @@ enum HTMLMetadataExtractor {
     private static func embeddedVideoURLs(in html: String) -> [URL] {
         var urls: [URL] = []
         let patterns = [
-            #""url_list"\s*:\s*\[(.*?)\]"#,
             #""playUrl"\s*:\s*"((?:[^"\\]|\\.)*)""#,
             #""videoUrl"\s*:\s*"((?:[^"\\]|\\.)*)""#,
             #""play_url"\s*:\s*"((?:[^"\\]|\\.)*)""#
@@ -258,11 +257,12 @@ enum HTMLMetadataExtractor {
             || host.hasSuffix(".iesdouyin.com") {
             return false
         }
-        if host.contains("sns-video") && (path.isEmpty || path == "/") { return false }
+        if (host.contains("bilivideo") || host.contains("sns-video") || host.contains("douyinvod"))
+            && (path.isEmpty || path == "/") { return false }
         return ["mp4", "m3u8", "mov"].contains(ext)
-            || path.contains("video")
             || host.contains("bilivideo")
             || host.contains("sns-video")
+            || host.contains("douyinvod")
     }
 
     private static func isAudioURL(_ url: URL) -> Bool {

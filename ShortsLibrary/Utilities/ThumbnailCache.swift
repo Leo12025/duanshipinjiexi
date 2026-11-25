@@ -14,7 +14,12 @@ enum ThumbnailCache {
         let key = "\(original.path)|\(maxPixel)" as NSString
         if let cached = memory.object(forKey: key) { return cached }
 
-        let target = directory.appendingPathComponent("\(stableHash(original.path)).jpg")
+        let attrs = try? FileManager.default.attributesOfItem(atPath: original.path)
+        let size = (attrs?[.size] as? NSNumber)?.stringValue ?? "0"
+        let mtime = (attrs?[.modificationDate] as? Date)?.timeIntervalSince1970.description ?? "0"
+        let target = directory.appendingPathComponent(
+            "\(stableHash("\(original.path)|\(maxPixel)|\(size)|\(mtime)")).jpg"
+        )
         if let disk = UIImage(contentsOfFile: target.path) {
             memory.setObject(disk, forKey: key)
             return disk
@@ -41,6 +46,18 @@ enum ThumbnailCache {
         }
         memory.setObject(image, forKey: key)
         return image
+    }
+
+    static func invalidate(for original: URL) {
+        let key = "\(original.path)|400" as NSString
+        memory.removeObject(forKey: key)
+        let attrs = try? FileManager.default.attributesOfItem(atPath: original.path)
+        let size = (attrs?[.size] as? NSNumber)?.stringValue ?? "0"
+        let mtime = (attrs?[.modificationDate] as? Date)?.timeIntervalSince1970.description ?? "0"
+        let target = directory.appendingPathComponent(
+            "\(stableHash("\(original.path)|400|\(size)|\(mtime)")).jpg"
+        )
+        try? FileManager.default.removeItem(at: target)
     }
 
     private static func stableHash(_ string: String) -> String {

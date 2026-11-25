@@ -11,6 +11,7 @@ struct ItemDetailView: View {
     @State private var showingActivity = false
     @State private var showingDelete = false
     @State private var toast: String?
+    @State private var isSaving = false
 
     var body: some View {
         ScrollView {
@@ -67,12 +68,22 @@ struct ItemDetailView: View {
                     .buttonStyle(.borderedProminent)
 
                     Button {
-                        Task { await saveToPhotos() }
+                        isSaving = true
+                        Task {
+                            await saveToPhotos()
+                            isSaving = false
+                        }
                     } label: {
-                        Label("保存到相册", systemImage: "photo")
-                            .frame(maxWidth: .infinity)
+                        if isSaving {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            Label("保存到相册", systemImage: "photo")
+                                .frame(maxWidth: .infinity)
+                        }
                     }
                     .buttonStyle(.bordered)
+                    .disabled(isSaving)
 
                     if item.needsRetry {
                         Button {
@@ -142,7 +153,8 @@ struct ItemDetailView: View {
             AudioPlayerView(url: audio.fileURL)
                 .frame(height: 120)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-        } else if [.image, .imageText, .dynamic].contains(item.kindEnum), !item.imageFiles.isEmpty {
+        } else if [.image, .imageText, .dynamic].contains(item.kindEnum),
+                  !item.imageFiles.filter({ $0.existsOnDisk }).isEmpty {
             ImageViewerView(files: item.imageFiles.filter { $0.existsOnDisk })
                 .frame(height: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 12))

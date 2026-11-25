@@ -28,6 +28,12 @@ enum MediaDownloader {
         }
     }
 
+    static func hasAudioTrack(at url: URL) async -> Bool {
+        let asset = AVURLAsset(url: url)
+        guard let tracks = try? await asset.load(.tracks) else { return false }
+        return tracks.contains { $0.mediaType == .audio }
+    }
+
     static func probeVideo(at url: URL) async -> (duration: Double?, width: Int?, height: Int?, byteSize: Int64?) {
         let asset = AVURLAsset(url: url)
         let duration = try? await asset.load(.duration).seconds

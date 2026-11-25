@@ -27,11 +27,11 @@ enum MediaQualityHeuristic {
         var bitrate = hint?.bitrate
 
         if width == nil || height == nil,
-           let groups = captures(pattern: #"(\d{3,4})[x](\d{3,4})"#, in: text), groups.count >= 3 {
+           let groups = captures(pattern: #"(\d{2,5})[x](\d{2,5})"#, in: text), groups.count >= 3 {
             if width == nil { width = Int(groups[1]) }
             if height == nil { height = Int(groups[2]) }
         }
-        if height == nil, let value = firstCapture(pattern: #"(\d{3,4})p"#, in: text) {
+        if height == nil, let value = firstCapture(pattern: #"(\d{2,5})p"#, in: text) {
             height = Int(value)
         }
         if width == nil, let value = firstCapture(pattern: #"width[=_]?(\d{3,4})"#, in: text) {
@@ -55,7 +55,11 @@ enum MediaQualityHeuristic {
     }
 
     static func sortedImages(_ urls: [URL]) -> [URL] {
-        urls.sorted { estimatedPixels(for: $0) > estimatedPixels(for: $1) }
+        urls
+    }
+
+    static func bestCover(from urls: [URL]) -> URL? {
+        urls.max { estimatedPixels(for: $0) < estimatedPixels(for: $1) }
     }
 
     static func estimatedPixels(for url: URL) -> Int {
@@ -120,9 +124,11 @@ struct ParsedMedia {
     let needsAudioMux: Bool
 
     var bestVideo: VideoCandidate? {
-        videos.max { lhs, rhs in
-            if lhs.pixelCount != rhs.pixelCount { return lhs.pixelCount < rhs.pixelCount }
-            return (lhs.bitrate ?? 0) < (rhs.bitrate ?? 0)
+        func rank(_ candidate: VideoCandidate) -> (Int, Int, Int, Int) {
+            let ext = candidate.url.pathExtension.lowercased()
+            let direct = ext == "mp4" ? 2 : (ext == "m3u8" ? 0 : 1)
+            return (direct, candidate.pixelCount, candidate.bitrate ?? 0, candidate.quality.isEmpty ? 0 : 1)
         }
+        return videos.max { rank($0) < rank($1) }
     }
 }

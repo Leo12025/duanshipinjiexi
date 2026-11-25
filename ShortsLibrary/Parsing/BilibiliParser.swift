@@ -36,7 +36,7 @@ struct BilibiliParser: PlatformParser {
             author: metadata.author,
             caption: metadata.description,
             pageURL: finalURL,
-            coverURL: metadata.image,
+            coverURL: metadata.image ?? MediaQualityHeuristic.bestCover(from: images),
             images: images,
             videos: videos,
             audioURL: audios.first,

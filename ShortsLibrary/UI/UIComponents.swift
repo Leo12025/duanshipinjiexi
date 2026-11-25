@@ -265,7 +265,7 @@ struct MediaThumbnail: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
-        .task(id: item.id) {
+        .task(id: "\(item.id.uuidString)-\(item.updatedAt.timeIntervalSince1970)") {
             image = await loadThumbnail()
         }
     }

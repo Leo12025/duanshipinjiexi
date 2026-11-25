@@ -4,6 +4,7 @@ import SwiftData
 private struct MonthGroup: Identifiable {
     let title: String
     var items: [LibraryItem]
+    let sortDate: Date
     var id: String { title }
 }
 
@@ -81,44 +82,47 @@ struct LibraryListView: View {
             }
         }
 
+        return result
+    }
+
+    private func sortItems(_ items: [LibraryItem]) -> [LibraryItem] {
         switch sort {
         case .newest:
-            return result.sorted { $0.createdAt > $1.createdAt }
+            return items.sorted { $0.createdAt > $1.createdAt }
         case .oldest:
-            return result.sorted { $0.createdAt < $1.createdAt }
+            return items.sorted { $0.createdAt < $1.createdAt }
         case .largest:
-            return result.sorted { ($0.byteSize ?? 0) > ($1.byteSize ?? 0) }
+            return items.sorted { ($0.byteSize ?? 0) > ($1.byteSize ?? 0) }
         case .title:
-            return result.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+            return items.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
         }
     }
 
     private var groupedItems: [MonthGroup] {
-        var groups: [MonthGroup] = []
-        for item in filteredItems {
-            let title = Self.monthTitle(for: item.createdAt)
-            if groups.last?.title == title {
-                groups[groups.count - 1].items.append(item)
-            } else {
-                groups.append(MonthGroup(title: title, items: [item]))
+        Dictionary(grouping: filteredItems) { Self.monthTitle(for: $0.createdAt) }
+            .compactMap { title, items -> MonthGroup? in
+                guard let latest = items.map(\.createdAt).max() else { return nil }
+                return MonthGroup(title: title, items: sortItems(items), sortDate: latest)
             }
-        }
-        return groups
+            .sorted { $0.sortDate > $1.sortDate }
     }
 
     private var selectedItems: [LibraryItem] {
         filteredItems.filter { selectedIDs.contains($0.id) }
     }
 
-    private var columnCount: Int {
-        sizeClass == .regular ? 3 : 2
+    private func columnCount(for width: CGFloat) -> Int {
+        guard sizeClass == .regular else { return 2 }
+        if width < 700 { return 3 }
+        if width < 1000 { return 4 }
+        return 5
     }
 
-    private func cardWidth(in containerWidth: CGFloat) -> CGFloat {
+    private func cardWidth(in containerWidth: CGFloat, columns: Int) -> CGFloat {
         let spacing: CGFloat = 12
         let horizontalPadding: CGFloat = 24
-        let available = max(0, containerWidth - horizontalPadding - spacing * CGFloat(columnCount - 1))
-        return floor(available / CGFloat(columnCount))
+        let available = max(0, containerWidth - horizontalPadding - spacing * CGFloat(columns - 1))
+        return floor(available / CGFloat(columns))
     }
 
     var body: some View {
@@ -141,7 +145,8 @@ struct LibraryListView: View {
                     } else {
                         GeometryReader { geometry in
                             ScrollView {
-                                let width = cardWidth(in: geometry.size.width)
+                                let columns = columnCount(for: geometry.size.width)
+                                let width = cardWidth(in: geometry.size.width, columns: columns)
 
                                 LazyVStack(alignment: .leading, spacing: 20) {
                                     ForEach(groupedItems) { group in
@@ -153,7 +158,7 @@ struct LibraryListView: View {
                                             LazyVGrid(
                                                 columns: Array(
                                                     repeating: GridItem(.fixed(width), spacing: 12),
-                                                    count: columnCount
+                                                    count: columns
                                                 ),
                                                 spacing: 12
                                             ) {
@@ -185,6 +190,7 @@ struct LibraryListView: View {
                         }
                     } label: {
                         Image(systemName: "arrow.down.circle.dotted")
+                            .accessibilityLabel("排序")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -192,16 +198,19 @@ struct LibraryListView: View {
                         isAdding = true
                     } label: {
                         Image(systemName: "plus")
+                            .accessibilityLabel("添加链接")
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(isSelecting ? "完成" : "选择") {
-                        isSelecting.toggle()
-                        selectedIDs.removeAll()
+                if filter != .trash {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(isSelecting ? "完成" : "选择") {
+                            isSelecting.toggle()
+                            selectedIDs.removeAll()
+                        }
                     }
                 }
                 ToolbarItemGroup(placement: .bottomBar) {
-                    if isSelecting {
+                    if isSelecting && filter != .trash {
                         Button("收藏") {
                             for item in selectedItems {
                                 item.isFavorite = true

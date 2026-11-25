@@ -58,9 +58,12 @@ enum LinkIngestService {
             do {
                 parsed = try await parser.parse(url: url)
                 ParseCache.store(parsed, for: url, loggedIn: loggedIn)
-            } catch AppError.noMedia {
+            } catch {
                 ParseCache.markFailure(for: url, loggedIn: loggedIn)
-                throw AppError.platformChanged(parser.source.displayName)
+                if case AppError.noMedia = error {
+                    throw AppError.platformChanged(parser.source.displayName)
+                }
+                throw error
             }
         }
         let existed = LibraryRepository.shared.existingItem(
@@ -81,7 +84,11 @@ enum LinkIngestService {
 
     static func redownload(item: LibraryItem, in modelContext: ModelContext) {
         for file in item.files {
-            if file.existsOnDisk { try? FileManager.default.removeItem(at: file.fileURL) }
+            if file.existsOnDisk {
+                ThumbnailCache.invalidate(for: file.fileURL)
+                VideoThumbnailCache.invalidate(for: file.fileURL)
+                try? FileManager.default.removeItem(at: file.fileURL)
+            }
             modelContext.delete(file)
         }
         item.files = []

@@ -43,10 +43,10 @@ final class LibraryRepository {
             existing.author = parsed.author
             existing.caption = parsed.caption
             existing.pageURLString = parsed.pageURL.absoluteString
-            existing.sourceVideoURLString = parsed.bestVideo?.url.secureMediaURL.absoluteString
-            existing.sourceAudioURLString = parsed.audioURL?.secureMediaURL.absoluteString
-            existing.sourceCoverURLString = parsed.coverURL?.secureMediaURL.absoluteString
-            existing.sourceImageURLStrings = parsed.images.map(\.secureMediaURL.absoluteString)
+            existing.sourceVideoURLString = parsed.bestVideo?.url.absoluteString
+            existing.sourceAudioURLString = parsed.audioURL?.absoluteString
+            existing.sourceCoverURLString = parsed.coverURL?.absoluteString
+            existing.sourceImageURLStrings = parsed.images.map(\.absoluteString)
             existing.needsAudioMux = parsed.needsAudioMux
             existing.updatedAt = Date()
             return existing
@@ -61,10 +61,10 @@ final class LibraryRepository {
             caption: parsed.caption,
             pageURL: parsed.pageURL
         )
-        item.sourceVideoURLString = parsed.bestVideo?.url.secureMediaURL.absoluteString
-        item.sourceAudioURLString = parsed.audioURL?.secureMediaURL.absoluteString
-        item.sourceCoverURLString = parsed.coverURL?.secureMediaURL.absoluteString
-        item.sourceImageURLStrings = parsed.images.map(\.secureMediaURL.absoluteString)
+        item.sourceVideoURLString = parsed.bestVideo?.url.absoluteString
+        item.sourceAudioURLString = parsed.audioURL?.absoluteString
+        item.sourceCoverURLString = parsed.coverURL?.absoluteString
+        item.sourceImageURLStrings = parsed.images.map(\.absoluteString)
         item.needsAudioMux = parsed.needsAudioMux
         context.insert(item)
         return item

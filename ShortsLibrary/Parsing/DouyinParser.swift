@@ -36,7 +36,7 @@ struct DouyinParser: PlatformParser {
             author: metadata.author ?? detail.author,
             caption: metadata.description ?? detail.description,
             pageURL: finalURL,
-            coverURL: metadata.image ?? images.first,
+            coverURL: metadata.image ?? MediaQualityHeuristic.bestCover(from: images),
             images: images,
             videos: videos,
             audioURL: nil,
@@ -62,7 +62,7 @@ struct DouyinParser: PlatformParser {
                 return id
             }
         }
-        return components.last
+        return nil
     }
 
     private struct DouyinDetail {
@@ -87,8 +87,9 @@ struct DouyinParser: PlatformParser {
         }
 
         for text in texts {
-            guard let object = jsonObjectAfterAwemeDetail(in: text) else { continue }
-            collect(from: object, into: &result)
+            for object in jsonObjectsAfterAwemeDetail(in: text) {
+                collect(from: object, into: &result)
+            }
         }
 
         result.images = unique(result.images)
@@ -96,48 +97,56 @@ struct DouyinParser: PlatformParser {
         return result
     }
 
-    private func jsonObjectAfterAwemeDetail(in text: String) -> [String: Any]? {
-        guard let marker = text.range(of: "\"aweme_detail\"") else { return nil }
-        let tail = text[marker.upperBound...]
-        guard let open = tail.firstIndex(of: "{") else { return nil }
+    private func jsonObjectsAfterAwemeDetail(in text: String) -> [[String: Any]] {
+        let marker = "\"aweme_detail\""
+        var results: [[String: Any]] = []
+        var searchStart = text.startIndex
 
-        var depth = 0
-        var inString = false
-        var escaped = false
-        var close: String.Index?
+        while let markerRange = text.range(of: marker, range: searchStart..<text.endIndex) {
+            searchStart = markerRange.upperBound
+            let tail = text[markerRange.upperBound...]
+            guard let open = tail.firstIndex(of: "{") else { continue }
 
-        for index in tail[open...].indices {
-            let character = tail[index]
-            if inString {
-                if escaped {
-                    escaped = false
-                } else if character == "\\" {
-                    escaped = true
-                } else if character == "\"" {
-                    inString = false
+            var depth = 0
+            var inString = false
+            var escaped = false
+            var close: String.Index?
+
+            for index in tail[open...].indices {
+                let character = tail[index]
+                if inString {
+                    if escaped {
+                        escaped = false
+                    } else if character == "\\" {
+                        escaped = true
+                    } else if character == "\"" {
+                        inString = false
+                    }
+                    continue
                 }
+                if character == "\"" {
+                    inString = true
+                } else if character == "{" {
+                    depth += 1
+                } else if character == "}" {
+                    depth -= 1
+                    if depth == 0 {
+                        close = index
+                        break
+                    }
+                }
+            }
+
+            guard let close else { continue }
+            let jsonText = String(tail[open...close])
+            guard let data = jsonText.data(using: .utf8),
+                  let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 continue
             }
-            if character == "\"" {
-                inString = true
-            } else if character == "{" {
-                depth += 1
-            } else if character == "}" {
-                depth -= 1
-                if depth == 0 {
-                    close = index
-                    break
-                }
-            }
+            results.append(object)
         }
 
-        guard let close else { return nil }
-        let jsonText = String(tail[open...close])
-        guard let data = jsonText.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return nil
-        }
-        return object
+        return results
     }
 
     private func collect(from value: Any, into result: inout DouyinDetail, context: String = "") {
@@ -228,13 +237,7 @@ struct DouyinParser: PlatformParser {
     }
 
     private func unique(_ urls: [URL]) -> [URL] {
-        var seen: Set<String> = []
-        return urls.filter { url in
-            let key = url.absoluteString
-            guard !seen.contains(key) else { return false }
-            seen.insert(key)
-            return true
-        }
+        URL.dedupeMedia(urls)
     }
 
     private func firstCapture(pattern: String, in text: String) -> String? {

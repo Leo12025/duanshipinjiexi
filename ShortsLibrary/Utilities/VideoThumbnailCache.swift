@@ -14,7 +14,12 @@ enum VideoThumbnailCache {
         let key = "\(videoURL.path)" as NSString
         if let cached = memory.object(forKey: key) { return cached }
 
-        let target = directory.appendingPathComponent("\(stableHash(videoURL.path)).jpg")
+        let attrs = try? FileManager.default.attributesOfItem(atPath: videoURL.path)
+        let size = (attrs?[.size] as? NSNumber)?.stringValue ?? "0"
+        let mtime = (attrs?[.modificationDate] as? Date)?.timeIntervalSince1970.description ?? "0"
+        let target = directory.appendingPathComponent(
+            "\(stableHash("\(videoURL.path)|\(size)|\(mtime)")).jpg"
+        )
         if let disk = UIImage(contentsOfFile: target.path) {
             memory.setObject(disk, forKey: key)
             return disk
@@ -39,6 +44,17 @@ enum VideoThumbnailCache {
             return image
         }
         return nil
+    }
+
+    static func invalidate(for videoURL: URL) {
+        memory.removeObject(forKey: videoURL.path as NSString)
+        let attrs = try? FileManager.default.attributesOfItem(atPath: videoURL.path)
+        let size = (attrs?[.size] as? NSNumber)?.stringValue ?? "0"
+        let mtime = (attrs?[.modificationDate] as? Date)?.timeIntervalSince1970.description ?? "0"
+        let target = directory.appendingPathComponent(
+            "\(stableHash("\(videoURL.path)|\(size)|\(mtime)")).jpg"
+        )
+        try? FileManager.default.removeItem(at: target)
     }
 
     private static func stableHash(_ string: String) -> String {

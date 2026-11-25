@@ -1,17 +1,29 @@
 import Foundation
 
 enum PublicPageLoader {
+    private static let loginKeywords = [
+        "请先登录", "登录后查看", "登录后可见", "请登录后", "登录以查看",
+        "log in", "sign in", "验证码", "需要登录"
+    ]
+    private static let rateLimitKeywords = [
+        "访问频繁", "操作频繁", "请求过于频繁", "too many requests", "rate limit"
+    ]
+    private static let verificationMarkers = [
+        "_$jsvmprt", "security verification", "verify yourself", "captcha_challenge", "滑动验证"
+    ]
+
     static func load(url: URL) async throws -> (String, URL) {
         let result = try await loadPage(url: url)
         let lower = result.0.lowercased()
 
-        if ["请先登录", "登录后查看", "登录后可见", "请登录后", "登录以查看"]
-            .contains(where: { lower.contains($0) }) {
+        if loginKeywords.contains(where: { lower.contains($0) }) {
             throw AppError.loginRequired(platformName(for: url))
         }
-        if ["访问频繁", "操作频繁", "请求过于频繁", "too many requests"]
-            .contains(where: { lower.contains($0) }) {
+        if rateLimitKeywords.contains(where: { lower.contains($0) }) {
             throw AppError.rateLimited
+        }
+        if verificationMarkers.contains(where: { lower.contains($0) }) {
+            throw AppError.verificationRequired(platformName(for: url))
         }
         return result
     }
@@ -33,7 +45,9 @@ enum PublicPageLoader {
 
     private static func isUsable(_ html: String) -> Bool {
         let trimmed = html.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && !trimmed.contains("_$jsvmprt")
+        guard !trimmed.isEmpty else { return false }
+        let lower = trimmed.lowercased()
+        return !verificationMarkers.contains { lower.contains($0) }
     }
 
     private static func platformName(for url: URL) -> String {

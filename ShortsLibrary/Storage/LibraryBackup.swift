@@ -75,7 +75,10 @@ enum LibraryBackup {
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(backup)
 
-        let url = AppPaths.root.appendingPathComponent("library.json")
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        let filename = "library-\(formatter.string(from: Date())).json"
+        let url = AppPaths.root.appendingPathComponent(filename)
         try data.write(to: url, options: .atomic)
         return url
     }
@@ -86,6 +89,9 @@ enum LibraryBackup {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let backup = try decoder.decode(LibraryBackupFile.self, from: data)
+        guard backup.version <= 1 else {
+            throw AppError.fileSystem("不支持的备份版本 \(backup.version)")
+        }
 
         let allItems = (try? context.fetch(FetchDescriptor<LibraryItem>())) ?? []
         var existingByKey: [String: LibraryItem] = [:]
@@ -93,25 +99,35 @@ enum LibraryBackup {
             existingByKey[key(source: item.source, sourceId: item.sourceId)] = item
         }
 
+        var seenItemKeys: Set<String> = []
+        var restoredItems = 0
+
         for saved in backup.items {
+            let itemKey = key(source: saved.source, sourceId: saved.sourceId)
+            guard seenItemKeys.insert(itemKey).inserted,
+                  let source = MediaSource(rawValue: saved.source),
+                  let kind = MediaKind(rawValue: saved.kind) else { continue }
+
+            if let existing = existingByKey[itemKey], existing.updatedAt > saved.updatedAt { continue }
+
             let item: LibraryItem
-            if let existing = existingByKey[key(source: saved.source, sourceId: saved.sourceId)] {
+            if let existing = existingByKey[itemKey] {
                 item = existing
             } else {
-                let pageURL = URL(string: saved.pageURLString) ?? URL(string: "about:blank")!
                 item = LibraryItem(
-                    source: MediaSource(rawValue: saved.source) ?? .douyin,
+                    source: source,
                     sourceId: saved.sourceId,
-                    kind: MediaKind(rawValue: saved.kind) ?? .video,
+                    kind: kind,
                     title: saved.title,
                     author: saved.author,
                     caption: saved.caption,
-                    pageURL: pageURL
+                    pageURL: URL(string: saved.pageURLString) ?? URL(string: "about:blank")!
                 )
                 item.id = saved.id
                 context.insert(item)
             }
 
+            item.kind = kind.rawValue
             item.title = saved.title
             item.author = saved.author
             item.caption = saved.caption
@@ -132,15 +148,19 @@ enum LibraryBackup {
             item.lastDownloadError = saved.lastDownloadError
             item.needsAudioMux = saved.needsAudioMux ?? false
 
-            for file in item.files {
-                context.delete(file)
-            }
+            for file in item.files { context.delete(file) }
             item.files = []
 
+            var hasMissingFile = false
             for savedFile in saved.files {
+                guard isValidRelativePath(savedFile.relativePath),
+                      let role = FileRole(rawValue: savedFile.role) else {
+                    hasMissingFile = true
+                    continue
+                }
                 let file = MediaFile(
                     relativePath: savedFile.relativePath,
-                    role: FileRole(rawValue: savedFile.role) ?? .image,
+                    role: role,
                     mimeType: savedFile.mimeType,
                     width: savedFile.width,
                     height: savedFile.height,
@@ -152,7 +172,12 @@ enum LibraryBackup {
                 )
                 item.files.append(file)
                 context.insert(file)
+                if !file.existsOnDisk { hasMissingFile = true }
             }
+            if hasMissingFile { item.downloadFailed = true }
+
+            existingByKey[itemKey] = item
+            restoredItems += 1
         }
 
         var restoredAccounts = 0
@@ -161,24 +186,31 @@ enum LibraryBackup {
         for account in existingAccounts {
             accountsByKey[key(source: account.platform, sourceId: account.platformUserId)] = account
         }
+        var seenAccountKeys: Set<String> = []
+
         for saved in backup.accounts ?? [] {
+            let accountKey = key(source: saved.platform, sourceId: saved.platformUserId)
+            guard seenAccountKeys.insert(accountKey).inserted,
+                  let platform = MediaSource(rawValue: saved.platform),
+                  let source = FollowSource(rawValue: saved.source) else { continue }
+
             let account: FollowedAccount
-            if let existing = accountsByKey[key(source: saved.platform, sourceId: saved.platformUserId)] {
+            if let existing = accountsByKey[accountKey] {
+                if existing.syncedAt > saved.syncedAt { continue }
                 account = existing
             } else {
                 account = FollowedAccount(
-                    platform: MediaSource(rawValue: saved.platform) ?? .douyin,
+                    platform: platform,
                     platformUserId: saved.platformUserId,
                     secUserId: saved.secUserId,
                     displayName: saved.displayName,
                     remark: saved.remark,
                     groupName: saved.groupName,
                     avatarURLString: saved.avatarURLString,
-                    source: FollowSource(rawValue: saved.source) ?? .manual
+                    source: source
                 )
                 account.id = saved.id
                 context.insert(account)
-                restoredAccounts += 1
             }
             account.secUserId = saved.secUserId
             account.displayName = saved.displayName
@@ -188,10 +220,22 @@ enum LibraryBackup {
             account.avatarPHash = saved.avatarPHash
             account.syncedAt = saved.syncedAt
             account.createdAt = saved.createdAt
+            accountsByKey[accountKey] = account
+            restoredAccounts += 1
         }
 
         try context.save()
-        return backup.items.count + restoredAccounts
+        return restoredItems + restoredAccounts
+    }
+
+    private static func isValidRelativePath(_ path: String) -> Bool {
+        guard !path.isEmpty,
+              !path.hasPrefix("/"),
+              !path.contains(".."),
+              !path.contains("\\") else { return false }
+        let root = AppPaths.root.standardizedFileURL.path
+        let resolved = AppPaths.root.appendingPathComponent(path).standardizedFileURL.path
+        return resolved.hasPrefix(root + "/")
     }
 
     private static func key(source: String, sourceId: String) -> String {

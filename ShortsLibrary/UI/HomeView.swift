@@ -3,6 +3,7 @@ import SwiftData
 
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
+    @FocusState private var inputFocused: Bool
 
     @Binding var externalInput: URL?
     @Binding var selectedTab: Int
@@ -20,7 +21,6 @@ struct HomeView: View {
     @State private var loginRequiredPlatform: PlatformLogin?
     @State private var showingQueue = false
     @State private var showingFollows = false
-    @State private var loginPlatform: PlatformLogin?
 
     private var activeItems: [LibraryItem] {
         allItems.filter { !$0.isTrashed }
@@ -74,18 +74,15 @@ struct HomeView: View {
             .sheet(isPresented: $showingFollows) {
                 FollowListView()
             }
-            .sheet(item: $loginPlatform) { platform in
-                PlatformLoginView(platform: platform)
+            .onAppear {
+                guard let url = externalInput else { return }
+                inputText = url.absoluteString
+                externalInput = nil
             }
             .onChange(of: externalInput) { _, newValue in
                 guard let url = newValue else { return }
                 inputText = url.absoluteString
                 externalInput = nil
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .openPlatformLogin)) { output in
-                if let platform = output.object as? PlatformLogin {
-                    loginPlatform = platform
-                }
             }
         }
     }
@@ -133,14 +130,16 @@ struct HomeView: View {
                 }
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
+                .focused($inputFocused)
+
+            if let parseMessage {
+                Text(parseMessage)
+                    .font(.caption)
+                    .foregroundStyle(parseFailed ? .red : .green)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             HStack {
-                if let parseMessage {
-                    Text(parseMessage)
-                        .font(.caption)
-                        .foregroundStyle(parseFailed ? .red : .green)
-                        .lineLimit(2)
-                }
                 Spacer()
                 Button {
                     Task { await ingest() }

@@ -36,7 +36,7 @@ struct XiaohongshuParser: PlatformParser {
             author: metadata.author,
             caption: metadata.description ?? page.desc,
             pageURL: finalURL,
-            coverURL: metadata.image ?? images.first,
+            coverURL: metadata.image ?? MediaQualityHeuristic.bestCover(from: images),
             images: images,
             videos: videos,
             audioURL: nil,
@@ -87,7 +87,9 @@ struct XiaohongshuParser: PlatformParser {
 
     private func extractSourceID(from url: URL, html: String) -> String? {
         let components = url.pathComponents.filter { $0 != "/" }
-        if let last = components.last, last.count >= 16 {
+        if let last = components.last,
+           last.count == 24,
+           last.allSatisfy(\.isHexDigit) {
             return last
         }
 
@@ -106,21 +108,7 @@ struct XiaohongshuParser: PlatformParser {
     }
 
     private func unique(_ urls: [URL]) -> [URL] {
-        var seen: Set<String> = []
-        return urls.filter { url in
-            let absolute = url.absoluteString
-            let key: String
-            if absolute.hasPrefix("https://") {
-                key = String(absolute.dropFirst(8))
-            } else if absolute.hasPrefix("http://") {
-                key = String(absolute.dropFirst(7))
-            } else {
-                key = absolute
-            }
-            guard !seen.contains(key) else { return false }
-            seen.insert(key)
-            return true
-        }
+        URL.dedupeMedia(urls)
     }
 
     private func makeURL(from raw: String) -> URL? {

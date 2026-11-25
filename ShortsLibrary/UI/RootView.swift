@@ -13,6 +13,7 @@ struct RootView: View {
 
     @State private var selectedTab = 0
     @State private var homeInput: URL?
+    @State private var homeResetID = UUID()
     @State private var loginPlatform: PlatformLogin?
     @State private var alertMessage: String?
     @State private var detectedLink: URL?
@@ -21,6 +22,7 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeView(externalInput: $homeInput, selectedTab: $selectedTab)
+                .id(homeResetID)
                 .tabItem {
                     Label("首页", systemImage: "house")
                 }
@@ -59,6 +61,7 @@ struct RootView: View {
                 guard let link = detectedLink else { return }
                 detectedLink = nil
                 homeInput = link
+                homeResetID = UUID()
                 selectedTab = 0
             }
         } message: {
@@ -84,6 +87,7 @@ struct RootView: View {
         .onOpenURL { url in
             if let target = Self.extractURL(from: url) {
                 homeInput = target
+                homeResetID = UUID()
                 selectedTab = 0
             } else {
                 alertMessage = "无法识别打开的链接"

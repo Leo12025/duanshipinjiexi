@@ -20,6 +20,7 @@ struct DownloadQueueTask: Identifiable {
     let onError: (@MainActor (String) -> Void)?
     var progress: Double = 0
     var status: QueueTaskStatus = .pending
+    var generation: Int = 0
     var error: String?
 }
 
@@ -63,6 +64,14 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
         onFinish: (@MainActor (URL) async -> Void)? = nil,
         onError: (@MainActor (String) -> Void)? = nil
     ) -> UUID {
+        let key = Self.taskKey(url: url, destination: destination)
+        if let existing = tasks.first(where: {
+            Self.taskKey(url: $0.url, destination: $0.destination) == key
+                && ($0.status == .pending || $0.status == .running)
+        }) {
+            return existing.id
+        }
+
         let task = DownloadQueueTask(
             url: url,
             destination: destination,
@@ -90,6 +99,7 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
             MediaDownloader.cancel(taskID: task.downloadID)
         }
         if let index = tasks.firstIndex(where: { $0.id == id }) {
+            tasks[index].generation += 1
             tasks[index].status = .failed
             tasks[index].error = "已取消"
         }
@@ -103,12 +113,14 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
             cancelledIDs.insert(id)
             MediaDownloader.cancel(taskID: tasks[index].downloadID)
         }
+        tasks[index].generation += 1
         tasks[index].status = .paused
     }
 
     func resume(id: UUID) {
         guard let index = tasks.firstIndex(where: { $0.id == id }),
               tasks[index].status == .paused else { return }
+        tasks[index].generation += 1
         tasks[index].status = .pending
         tasks[index].error = nil
         settingsChanged()
@@ -164,7 +176,10 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
     }
 
     private func process(id: UUID) async {
-        guard let task = tasks.first(where: { $0.id == id }) else { return }
+        guard let task = tasks.first(where: {
+            $0.id == id && $0.status == .pending && !cancelledIDs.contains(id)
+        }) else { return }
+        let generation = task.generation
         updateStatus(id: id, status: .running)
 
         do {
@@ -175,6 +190,14 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
             ) { [weak self] value in
                 Task { @MainActor in self?.updateProgress(id: id, value: value) }
             }
+            guard let current = tasks.first(where: { $0.id == id }),
+                  current.generation == generation,
+                  current.status == .running,
+                  !cancelledIDs.contains(id) else {
+                try? FileManager.default.removeItem(at: task.destination)
+                try? FileManager.default.removeItem(at: task.destination.appendingPathExtension("part"))
+                return
+            }
             updateStatus(id: id, status: .done)
             await task.onFinish?(task.destination)
             if UserDefaults.standard.bool(forKey: "shorts.notifyOnComplete") {
@@ -182,7 +205,8 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
             }
         } catch {
             if cancelledIDs.remove(id) != nil { return }
-            guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+            guard let index = tasks.firstIndex(where: { $0.id == id }),
+                  tasks[index].generation == generation else { return }
             tasks[index].status = .failed
             tasks[index].error = error.localizedDescription
             task.onError?(error.localizedDescription)
@@ -193,6 +217,10 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
         guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
         tasks[index].status = status
         if status == .done { tasks[index].progress = 1 }
+    }
+
+    private static func taskKey(url: URL, destination: URL) -> String {
+        "\(url.normalizedCacheKey)|\(destination.absoluteString)"
     }
 
     private func updateProgress(id: UUID, value: Double) {

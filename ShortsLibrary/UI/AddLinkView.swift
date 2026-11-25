@@ -77,11 +77,7 @@ struct AddLinkView: View {
         defer { isWorking = false }
 
         do {
-            if let initialURL {
-                try await LinkIngestService.ingest(url: initialURL, modelContext: modelContext)
-            } else {
-                try await LinkIngestService.ingest(text: text, modelContext: modelContext)
-            }
+            try await LinkIngestService.ingest(text: text, modelContext: modelContext)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
