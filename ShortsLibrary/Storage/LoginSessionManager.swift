@@ -50,7 +50,7 @@ enum PlatformLogin: String, CaseIterable, Identifiable {
         switch self {
         case .douyin: return ["iesdouyin.com"]
         case .kuaishou: return ["chenzhongtech.com", "gifshow.com"]
-        case .xiaohongshu: return ["xhslink.com"]
+        case .xiaohongshu: return ["xhslink.com", "xhslink.cn"]
         case .bilibili: return ["b23.tv"]
         }
     }

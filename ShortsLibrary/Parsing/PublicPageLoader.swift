@@ -19,16 +19,21 @@ enum PublicPageLoader {
     private static func loadPage(url: URL) async throws -> (String, URL) {
         if await LoginSessionManager.shared.isLoggedIn(for: url),
            let result = try? await WebViewPageLoader.load(from: url),
-           !result.0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+           isUsable(result.0) {
             return result
         }
 
         if let result = try? await NetworkClient.shared.html(from: url),
-           !result.0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+           isUsable(result.0) {
             return result
         }
 
         return try await WebViewPageLoader.load(from: url)
+    }
+
+    private static func isUsable(_ html: String) -> Bool {
+        let trimmed = html.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && !trimmed.contains("_$jsvmprt")
     }
 
     private static func platformName(for url: URL) -> String {

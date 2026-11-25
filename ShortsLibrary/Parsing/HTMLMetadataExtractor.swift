@@ -30,16 +30,16 @@ enum HTMLMetadataExtractor {
             case "og:description", "description", "twitter:description":
                 if result.description == nil { result.description = value }
             case "og:image", "twitter:image", "twitter:image:src":
-                if let url = URL(string: value) {
+                if let url = Self.httpURL(value) {
                     if result.image == nil { result.image = url }
                     if !result.imageURLs.contains(url) { result.imageURLs.append(url) }
                 }
             case "og:video", "og:video:secure_url", "twitter:player":
-                if let url = URL(string: value), !result.videoURLs.contains(url) {
+                if let url = Self.httpURL(value), !result.videoURLs.contains(url) {
                     result.videoURLs.append(url)
                 }
             case "og:audio", "twitter:player:stream":
-                if let url = URL(string: value), !result.audioURLs.contains(url) {
+                if let url = Self.httpURL(value), !result.audioURLs.contains(url) {
                     result.audioURLs.append(url)
                 }
             case "author", "og:article:author", "article:author":
@@ -103,16 +103,33 @@ enum HTMLMetadataExtractor {
                         result.author = name
                     }
                 }
-                if let thumbnail = firstString(in: dictionary["thumbnailUrl"]),
-                   let url = URL(string: thumbnail) {
-                    result.image = url
+                var imageValues: [String] = []
+                if let thumbnail = firstString(in: dictionary["thumbnailUrl"]) {
+                    imageValues.append(thumbnail)
                 }
-                for key in ["contentUrl", "embedUrl", "url"] {
+                if let images = dictionary["image"] as? [String] {
+                    imageValues.append(contentsOf: images)
+                } else if let image = dictionary["image"] as? String {
+                    imageValues.append(image)
+                }
+                for value in imageValues {
+                    guard let url = httpURL(value) else { continue }
+                    if result.image == nil { result.image = url }
+                    if !result.imageURLs.contains(url) { result.imageURLs.append(url) }
+                }
+
+                for key in ["contentUrl", "embedUrl"] {
                     if let value = firstString(in: dictionary[key]),
-                       let url = URL(string: value),
+                       let url = httpURL(value),
                        !result.videoURLs.contains(url) {
                         result.videoURLs.append(url)
                     }
+                }
+                if let value = firstString(in: dictionary["url"]),
+                   let url = httpURL(value),
+                   isVideoURL(url),
+                   !result.videoURLs.contains(url) {
+                    result.videoURLs.append(url)
                 }
             }
         }
@@ -164,7 +181,8 @@ enum HTMLMetadataExtractor {
             #""images"\s*:\s*\[(.*?)\]"#,
             #""image"\s*:\s*\[(.*?)\]"#,
             #""pictures"\s*:\s*\[(.*?)\]"#,
-            #""image_urls"\s*:\s*\[(.*?)\]"#
+            #""image_urls"\s*:\s*\[(.*?)\]"#,
+            #""url_list"\s*:\s*\[(.*?)\]"#
         ]
 
         for pattern in patterns {
@@ -221,8 +239,12 @@ enum HTMLMetadataExtractor {
 
     private static func cleanedURLString(_ raw: String) -> String {
         raw
-            .replacingOccurrences(of: #"\/"#, with: "/")
+            .replacingOccurrences(of: #"\\u002F"#, with: "/")
             .replacingOccurrences(of: #"\u002F"#, with: "/")
+            .replacingOccurrences(of: #"\\/"#, with: "/")
+            .replacingOccurrences(of: #"\/"#, with: "/")
+            .replacingOccurrences(of: "%5C", with: "")
+            .replacingOccurrences(of: "\\", with: "")
     }
 
     private static func isVideoURL(_ url: URL) -> Bool {
@@ -230,9 +252,17 @@ enum HTMLMetadataExtractor {
         let ext = url.pathExtension.lowercased()
         let host = url.host()?.lowercased() ?? ""
         if ["m4a", "mp3", "wav", "aac", "flac"].contains(ext) { return false }
+        if host == "douyin.com"
+            || host.hasSuffix(".douyin.com")
+            || host == "iesdouyin.com"
+            || host.hasSuffix(".iesdouyin.com") {
+            return false
+        }
+        if host.contains("sns-video") && (path.isEmpty || path == "/") { return false }
         return ["mp4", "m3u8", "mov"].contains(ext)
             || path.contains("video")
             || host.contains("bilivideo")
+            || host.contains("sns-video")
     }
 
     private static func isAudioURL(_ url: URL) -> Bool {
@@ -247,9 +277,15 @@ enum HTMLMetadataExtractor {
     private static func isImageURL(_ url: URL) -> Bool {
         let ext = url.pathExtension.lowercased()
         let host = url.host()?.lowercased() ?? ""
-        return ["jpg", "jpeg", "png", "apng", "gif", "webp", "heic"].contains(ext)
+        let path = url.path.lowercased()
+        let imageExtensions = ["jpg", "jpeg", "png", "apng", "gif", "webp", "heic", "image", "awebp"]
+        if path.contains("avatar") || path.contains("image-cut-tos-priv") { return false }
+        return imageExtensions.contains(ext)
             || host.contains("xhscdn")
+            || host.contains("sns-webpic")
             || host.contains("hdslb")
+            || host.contains("douyinpic")
+            || host.contains("byteimg")
     }
 
     private static func firstCapture(pattern: String, in text: String) -> String? {
@@ -353,6 +389,13 @@ enum HTMLMetadataExtractor {
                 return ns.substring(with: r)
             }
         }
+    }
+
+    private static func httpURL(_ raw: String) -> URL? {
+        guard let url = URL(string: raw),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme) else { return nil }
+        return url
     }
 
     private static func decode(_ raw: String) -> String {

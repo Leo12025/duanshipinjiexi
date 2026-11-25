@@ -26,7 +26,7 @@ enum AppError: LocalizedError {
         case .fileSystem(let detail):
             return "文件操作失败：\(detail)"
         case .loginRequired(let platform):
-            return "\(platform)需要登录后才能查看该资源，请在侧栏「平台登录」中登录后重试"
+            return "\(platform)需要登录后才能查看该资源，请在「我的」→「平台登录」中登录后重试"
         case .rateLimited:
             return "平台请求过于频繁，请稍后再试"
         case .platformChanged(let platform):

@@ -25,6 +25,34 @@ final class DownloadManager {
         taskID: UUID = UUID(),
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws {
+        let candidates = Self.fallbackCandidates(for: url)
+        var lastError: Error?
+
+        for (index, candidate) in candidates.enumerated() {
+            do {
+                try await downloadOnce(
+                    from: candidate,
+                    to: destination,
+                    resumeFromPartial: resumeFromPartial,
+                    taskID: taskID,
+                    progress: progress
+                )
+                return
+            } catch AppError.badStatus(404) where index < candidates.count - 1 {
+                lastError = AppError.badStatus(404)
+            }
+        }
+
+        throw lastError ?? AppError.badStatus(404)
+    }
+
+    private func downloadOnce(
+        from url: URL,
+        to destination: URL,
+        resumeFromPartial: Bool,
+        taskID: UUID,
+        progress: (@Sendable (Double) -> Void)?
+    ) async throws {
         let fm = FileManager.default
         try? fm.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
 
@@ -80,6 +108,36 @@ final class DownloadManager {
             throw AppError.badStatus(result.1.statusCode)
         }
         progress?(1)
+    }
+
+    private static func fallbackCandidates(for url: URL) -> [URL] {
+        guard let host = url.host()?.lowercased(),
+              host.contains("douyinpic") || host.contains("byteimg") else {
+            return [url]
+        }
+
+        let absolute = url.absoluteString
+        let parts = absolute.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+        let base = String(parts.first ?? "")
+        let query = parts.count > 1 ? String(parts[1]) : ""
+
+        guard let templateRange = base.range(of: "~tplv-") else { return [url] }
+        let originalBase = String(base[..<templateRange.lowerBound])
+
+        func makeURL(_ candidateBase: String) -> URL? {
+            let candidate = query.isEmpty ? candidateBase : "\(candidateBase)?\(query)"
+            guard let candidateURL = URL(string: candidate), candidateURL != url else { return nil }
+            return candidateURL
+        }
+
+        var candidates = [url]
+        if let original = makeURL(originalBase) {
+            candidates.append(original)
+        }
+        if let object = makeURL(originalBase + "~tplv-obj.image") {
+            candidates.append(object)
+        }
+        return candidates
     }
 
     func cancel(taskID: UUID) {

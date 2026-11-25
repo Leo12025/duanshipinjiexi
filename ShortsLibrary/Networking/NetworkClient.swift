@@ -11,8 +11,24 @@ final class NetworkClient {
     }()
 
     private let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+    private let searchEngineUA = "Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)"
 
     func html(from url: URL) async throws -> (String, URL) {
+        let initial = try await fetchHTML(from: url, userAgent: userAgent)
+
+        guard Self.needsPublicMetadata(for: initial.0, finalURL: initial.1) else {
+            return initial
+        }
+
+        if let fallback = try? await fetchHTML(from: url, userAgent: searchEngineUA),
+           fallback.0.contains("application/ld+json") || fallback.0.contains("aweme_detail") {
+            return fallback
+        }
+
+        return initial
+    }
+
+    private func fetchHTML(from url: URL, userAgent: String) async throws -> (String, URL) {
         var request = URLRequest(url: url)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("text/html,application/xhtml+xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
@@ -28,6 +44,13 @@ final class NetworkClient {
         let html = String(data: data, encoding: .utf8)
             ?? String(decoding: data, as: UTF8.self)
         return (html, response.url ?? url)
+    }
+
+    private static func needsPublicMetadata(for html: String, finalURL: URL) -> Bool {
+        let host = finalURL.host()?.lowercased() ?? ""
+        guard host.contains("douyin") || host.contains("iesdouyin") else { return false }
+        return html.contains("_$jsvmprt")
+            || (!html.contains("application/ld+json") && !html.contains("aweme_detail"))
     }
 
     func temporaryDownload(from url: URL) async throws -> URL {

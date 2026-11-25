@@ -1,37 +1,47 @@
 import SwiftUI
 import SwiftData
 
-struct LibraryListView: View {
-    let filter: LibraryFilter
-    @Binding var isAdding: Bool
+private struct MonthGroup: Identifiable {
+    let title: String
+    var items: [LibraryItem]
+    var id: String { title }
+}
 
+private enum LibrarySort: String, CaseIterable, Identifiable {
+    case newest
+    case oldest
+    case largest
+    case title
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .newest: return "最新"
+        case .oldest: return "最早"
+        case .largest: return "大小"
+        case .title: return "标题"
+        }
+    }
+}
+
+struct LibraryListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     @Query(sort: \LibraryItem.createdAt, order: .reverse)
     private var allItems: [LibraryItem]
 
+    @State private var filter: LibraryFilter = .all
+    @State private var sort: LibrarySort = .newest
     @State private var searchText = ""
-    @State private var inputText = ""
-    @State private var isParsing = false
-    @State private var parseMessage: String?
-    @State private var parseFailed = false
-    @State private var existingItem: LibraryItem?
-    @State private var loginRequiredPlatform: PlatformLogin?
+    @State private var isAdding = false
+    @State private var isSelecting = false
+    @State private var selectedIDs: Set<UUID> = []
+    @State private var shareItems: [Any]?
+    @State private var alertMessage: String?
 
-    init(filter: LibraryFilter, isAdding: Binding<Bool>) {
-        self.filter = filter
-        self._isAdding = isAdding
-    }
-
-    private var detectedPlatform: String? {
-        LinkIngestService.detectPlatform(in: inputText)
-    }
-
-    private var canParse: Bool {
-        !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isParsing
-    }
-
-    private var items: [LibraryItem] {
+    private var filteredItems: [LibraryItem] {
         let activeItems = allItems.filter { !$0.isTrashed }
         var result: [LibraryItem]
 
@@ -63,56 +73,102 @@ struct LibraryListView: View {
         }
 
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return result }
-
-        return result.filter { item in
-            [item.title, item.author ?? "", item.caption ?? ""]
-                .joined(separator: " ")
-                .localizedCaseInsensitiveContains(query)
+        if !query.isEmpty {
+            result = result.filter { item in
+                [item.title, item.author ?? "", item.caption ?? ""]
+                    .joined(separator: " ")
+                    .localizedCaseInsensitiveContains(query)
+            }
         }
+
+        switch sort {
+        case .newest:
+            return result.sorted { $0.createdAt > $1.createdAt }
+        case .oldest:
+            return result.sorted { $0.createdAt < $1.createdAt }
+        case .largest:
+            return result.sorted { ($0.byteSize ?? 0) > ($1.byteSize ?? 0) }
+        case .title:
+            return result.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        }
+    }
+
+    private var groupedItems: [MonthGroup] {
+        var groups: [MonthGroup] = []
+        for item in filteredItems {
+            let title = Self.monthTitle(for: item.createdAt)
+            if groups.last?.title == title {
+                groups[groups.count - 1].items.append(item)
+            } else {
+                groups.append(MonthGroup(title: title, items: [item]))
+            }
+        }
+        return groups
+    }
+
+    private var selectedItems: [LibraryItem] {
+        filteredItems.filter { selectedIDs.contains($0.id) }
+    }
+
+    private var gridColumns: [GridItem] {
+        let minimum: CGFloat = sizeClass == .regular ? 150 : 108
+        return [GridItem(.adaptive(minimum: minimum), spacing: 12)]
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
-                if filter == .all {
-                    ingestBox
-                }
+            VStack(spacing: 0) {
+                filterBar
 
                 Group {
-                    if items.isEmpty {
-                        ContentUnavailableView {
-                            Label("暂无内容", systemImage: "tray")
-                        } description: {
-                            Text("在上方粘贴链接，或点击右上角 + 添加")
-                        } actions: {
-                            Button("添加链接") { isAdding = true }
-                        }
+                    if filteredItems.isEmpty {
+                        EmptyStateView(
+                            systemImage: filter == .trash ? "trash" : "photo.stack",
+                            title: filter == .trash ? "回收站是空的" : "没有匹配的内容",
+                            message: filter == .trash
+                                ? "删除的内容会在这里保留 30 天。"
+                                : "试试切换筛选条件，或添加一条新链接。",
+                            buttonTitle: filter == .trash ? nil : "添加链接",
+                            action: filter == .trash ? nil : { isAdding = true }
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ScrollView {
-                            LazyVGrid(
-                                columns: [GridItem(.adaptive(minimum: 150), spacing: 14)],
-                                spacing: 14
-                            ) {
-                                ForEach(items) { item in
-                                    if filter == .trash {
-                                        TrashCard(item: item)
-                                    } else {
-                                        NavigationLink(value: item) {
-                                            ItemCard(item: item)
+                            LazyVGrid(columns: gridColumns, spacing: 16) {
+                                ForEach(groupedItems, id: \.title) { group in
+                                    Section {
+                                        ForEach(group.items) { item in
+                                            card(for: item)
                                         }
-                                        .buttonStyle(.plain)
+                                    } header: {
+                                        Text(group.title)
+                                            .font(.headline)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.top, 4)
                                     }
                                 }
                             }
-                            .padding()
+                            .padding(16)
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .navigationTitle(filter.displayName)
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle("资源库")
             .searchable(text: $searchText, prompt: "搜索标题、作者、文案")
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("排序", selection: $sort) {
+                            ForEach(LibrarySort.allCases) { option in
+                                Text(option.displayName).tag(option)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "arrow.down.circle.dotted")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         isAdding = true
@@ -120,178 +176,145 @@ struct LibraryListView: View {
                         Image(systemName: "plus")
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(isSelecting ? "完成" : "选择") {
+                        isSelecting.toggle()
+                        selectedIDs.removeAll()
+                    }
+                }
+                ToolbarItemGroup(placement: .bottomBar) {
+                    if isSelecting {
+                        Button("收藏") {
+                            for item in selectedItems {
+                                item.isFavorite = true
+                            }
+                            save()
+                            selectedIDs.removeAll()
+                        }
+                        Spacer()
+                        Button("删除", role: .destructive) {
+                            for item in selectedItems {
+                                LibraryRepository.shared.trash(item: item, in: modelContext)
+                            }
+                            selectedIDs.removeAll()
+                            isSelecting = false
+                        }
+                    }
+                }
             }
             .navigationDestination(for: LibraryItem.self) { item in
                 ItemDetailView(item: item)
             }
+            .sheet(isPresented: $isAdding) {
+                AddLinkView(initialURL: nil)
+            }
+            .sheet(isPresented: Binding(
+                get: { shareItems != nil },
+                set: { if !$0 { shareItems = nil } }
+            )) {
+                if let shareItems {
+                    ActivityView(items: shareItems)
+                }
+            }
+            .alert("提示", isPresented: Binding(
+                get: { alertMessage != nil },
+                set: { if !$0 { alertMessage = nil } }
+            )) {
+                Button("好的", role: .cancel) {}
+            } message: {
+                Text(alertMessage ?? "")
+            }
+            .onChange(of: filter) { _, _ in
+                selectedIDs.removeAll()
+                isSelecting = false
+            }
         }
     }
 
-    private var ingestBox: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("解析链接", systemImage: "link.badge.plus")
-                    .font(.headline)
-                Spacer()
-                if let detectedPlatform {
-                    Label(detectedPlatform, systemImage: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                }
-            }
-
-            HStack(alignment: .top, spacing: 8) {
-                TextField("粘贴抖音 / 快手 / 小红书 / B站分享文案或链接", text: $inputText, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...3)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-
-                Button {
-                    Task { await ingest() }
-                } label: {
-                    if isParsing {
-                        ProgressView()
-                    } else {
-                        Text("解析")
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(LibraryFilter.allCases) { item in
+                    Button {
+                        filter = item
+                    } label: {
+                        Label(item.displayName, systemImage: item.icon)
+                            .font(.subheadline)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(
+                                filter == item ? Color.accentColor : Color.secondary.opacity(0.12),
+                                in: Capsule()
+                            )
+                            .foregroundStyle(filter == item ? .white : .primary)
                     }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!canParse)
-            }
-
-            if let parseMessage {
-                Text(parseMessage)
-                    .font(.caption)
-                    .foregroundStyle(parseFailed ? .red : .green)
-            }
-
-            if let existingItem {
-                HStack(spacing: 8) {
-                    Text("如需获取最新资源可重新下载")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Button("重新下载") {
-                        LinkIngestService.redownload(item: existingItem, in: modelContext)
-                        self.existingItem = nil
-                        parseMessage = "已重新加入下载队列"
-                    }
-                    .buttonStyle(.bordered)
-                    .font(.caption)
+                    .buttonStyle(.plain)
                 }
             }
-
-            if let platform = loginRequiredPlatform {
-                Button("去登录 \(platform.displayName)") {
-                    NotificationCenter.default.post(name: .openPlatformLogin, object: platform)
-                    loginRequiredPlatform = nil
-                }
-                .buttonStyle(.bordered)
-                .font(.caption)
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
-        .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal)
+        .background(.bar)
     }
 
-    private func ingest() async {
-        isParsing = true
-        parseMessage = nil
-        parseFailed = false
-        existingItem = nil
-        loginRequiredPlatform = nil
-        defer { isParsing = false }
-
-        do {
-            let outcome = try await LinkIngestService.ingest(text: inputText, modelContext: modelContext)
-            parseMessage = outcome.message
-            existingItem = outcome.isNew ? nil : outcome.item
-            inputText = ""
-        } catch {
-            parseFailed = true
-            parseMessage = error.localizedDescription
-            if case AppError.loginRequired(let name) = error,
-               let platform = PlatformLogin.allCases.first(where: { $0.displayName == name }) {
-                loginRequiredPlatform = platform
-            }
-        }
-    }
-}
-
-private struct ItemCard: View {
-    let item: LibraryItem
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ZStack {
-                if let cover = item.coverFile, cover.existsOnDisk {
-                    LocalImageView(url: cover.fileURL, thumbnail: true)
+    @ViewBuilder
+    private func card(for item: LibraryItem) -> some View {
+        if filter == .trash {
+            TrashCard(item: item)
+        } else if isSelecting {
+            Button {
+                if selectedIDs.contains(item.id) {
+                    selectedIDs.remove(item.id)
                 } else {
-                    Rectangle()
-                        .fill(.quaternary)
-                        .overlay {
-                            Image(systemName: item.kindEnum == .video ? "play.rectangle" : "photo.stack")
-                                .font(.title)
-                                .foregroundStyle(.secondary)
+                    selectedIDs.insert(item.id)
+                }
+            } label: {
+                ItemCard(item: item, isSelected: selectedIDs.contains(item.id), showsDetails: false)
+            }
+            .buttonStyle(.plain)
+        } else {
+            NavigationLink(value: item) {
+                ItemCard(item: item, showsDetails: false)
+                    .contextMenu {
+                        Button(item.isFavorite ? "取消收藏" : "收藏") {
+                            item.isFavorite.toggle()
+                            save()
                         }
-                }
+                        Button("分享") {
+                            shareItems = Self.sharePayload(for: item)
+                        }
+                        if item.needsRetry {
+                            Button("重新下载") {
+                                MediaRetryService.enqueueRetry(item: item, in: modelContext)
+                                alertMessage = "已重新加入下载队列"
+                            }
+                        }
+                        Button("删除到最近删除", role: .destructive) {
+                            LibraryRepository.shared.trash(item: item, in: modelContext)
+                        }
+                    }
             }
-            .frame(height: 110)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-
-            Text(item.title)
-                .font(.subheadline.weight(.medium))
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-
-            HStack {
-                Text(item.sourceEnum.displayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                if item.needsRetry {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                }
-                Spacer()
-                Image(systemName: item.kindEnum == .video ? "video" : "photo")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            .buttonStyle(.plain)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
-}
 
-private struct TrashCard: View {
-    @Environment(\.modelContext) private var modelContext
-    let item: LibraryItem
+    private func save() {
+        try? modelContext.save()
+    }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(item.title)
-                .font(.subheadline.weight(.medium))
-                .lineLimit(2)
-            if let date = item.trashedAt {
-                Text(date.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            HStack {
-                Button("恢复") {
-                    LibraryRepository.shared.restore(item: item, in: modelContext)
-                }
-                .buttonStyle(.bordered)
-                Button("彻底删除", role: .destructive) {
-                    try? LibraryRepository.shared.deletePermanently(item: item, in: modelContext)
-                }
-                .buttonStyle(.bordered)
-            }
+    private static func monthTitle(for date: Date) -> String {
+        let components = Calendar.current.dateComponents([.year, .month], from: date)
+        let year = components.year ?? Calendar.current.component(.year, from: date)
+        let month = components.month ?? Calendar.current.component(.month, from: date)
+        return "\(year)年\(month)月"
+    }
+
+    private static func sharePayload(for item: LibraryItem) -> [Any] {
+        var result: [Any] = []
+        if let pageURL = item.pageURL {
+            result.append(pageURL)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
+        result.append(contentsOf: item.files.filter { $0.existsOnDisk }.map(\.fileURL))
+        return result
     }
 }
