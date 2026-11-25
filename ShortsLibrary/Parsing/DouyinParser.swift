@@ -4,6 +4,11 @@ struct DouyinParser: PlatformParser {
     let source: MediaSource = .douyin
     let supportedHosts = ["douyin.com", "iesdouyin.com"]
 
+    private static let detailMarkers = [
+        "aweme_detail", "awemeDetail", "item_detail", "itemInfo",
+        "RENDER_DATA", "_ROUTER_DATA", "_SSR_DATA"
+    ]
+
     func parse(url: URL) async throws -> ParsedMedia {
         let (html, finalURL) = try await PublicPageLoader.load(url: url)
         let metadata = HTMLMetadataExtractor.extract(html: html, finalURL: finalURL)
@@ -15,8 +20,10 @@ struct DouyinParser: PlatformParser {
             throw AppError.parsingFailed("无法提取抖音视频 ID")
         }
 
+        let isVideoPage = Self.isVideoPage(finalURL)
+
         var videoURLs = metadata.videoURLs + detail.videos
-        var imageURLs = metadata.imageURLs + detail.images
+        var imageURLs = isVideoPage ? detail.images : metadata.imageURLs + detail.images
         videoURLs = unique(videoURLs)
         imageURLs = unique(imageURLs)
 
@@ -26,6 +33,9 @@ struct DouyinParser: PlatformParser {
         let images = MediaQualityHeuristic.sortedImages(imageURLs)
         guard !videos.isEmpty || !images.isEmpty else {
             throw AppError.noMedia
+        }
+        if isVideoPage, videos.isEmpty {
+            throw AppError.parsingFailed("未能提取抖音视频地址，请稍后重试")
         }
 
         return ParsedMedia(
@@ -65,7 +75,12 @@ struct DouyinParser: PlatformParser {
         return nil
     }
 
-    private struct DouyinDetail {
+    private static func isVideoPage(_ url: URL) -> Bool {
+        let path = url.path.lowercased()
+        return path.contains("/video/") || path.hasSuffix("/video")
+    }
+
+    struct DouyinDetail {
         var sourceID: String?
         var title: String?
         var author: String?
@@ -74,20 +89,20 @@ struct DouyinParser: PlatformParser {
         var videos: [URL] = []
     }
 
-    private func extractDetail(from html: String) -> DouyinDetail {
+    func extractDetail(from html: String) -> DouyinDetail {
         var result = DouyinDetail()
         var texts = [html]
 
         let scriptPattern = #"<script\b[^>]*>([\s\S]{0,400000}?)</script>"#
         for group in captures(pattern: scriptPattern, in: html, options: .dotMatchesLineSeparators) {
             guard let raw = group.dropFirst().first else { continue }
-            if raw.contains("aweme_detail") || raw.contains("RENDER_DATA") {
+            if Self.detailMarkers.contains(where: { raw.localizedCaseInsensitiveContains($0) }) {
                 texts.append(raw.removingPercentEncoding ?? raw)
             }
         }
 
         for text in texts {
-            for object in jsonObjectsAfterAwemeDetail(in: text) {
+            for object in jsonObjects(in: text) {
                 collect(from: object, into: &result)
             }
         }
@@ -97,56 +112,65 @@ struct DouyinParser: PlatformParser {
         return result
     }
 
-    private func jsonObjectsAfterAwemeDetail(in text: String) -> [[String: Any]] {
-        let marker = "\"aweme_detail\""
+    private func jsonObjects(in text: String) -> [[String: Any]] {
         var results: [[String: Any]] = []
-        var searchStart = text.startIndex
 
-        while let markerRange = text.range(of: marker, range: searchStart..<text.endIndex) {
-            searchStart = markerRange.upperBound
-            let tail = text[markerRange.upperBound...]
-            guard let open = tail.firstIndex(of: "{") else { continue }
-
-            var depth = 0
-            var inString = false
-            var escaped = false
-            var close: String.Index?
-
-            for index in tail[open...].indices {
-                let character = tail[index]
-                if inString {
-                    if escaped {
-                        escaped = false
-                    } else if character == "\\" {
-                        escaped = true
-                    } else if character == "\"" {
-                        inString = false
-                    }
-                    continue
-                }
-                if character == "\"" {
-                    inString = true
-                } else if character == "{" {
-                    depth += 1
-                } else if character == "}" {
-                    depth -= 1
-                    if depth == 0 {
-                        close = index
-                        break
-                    }
-                }
+        for marker in Self.detailMarkers {
+            var searchStart = text.startIndex
+            while let markerRange = text.range(
+                of: marker,
+                options: [.caseInsensitive],
+                range: searchStart..<text.endIndex
+            ) {
+                searchStart = markerRange.upperBound
+                let tail = text[markerRange.upperBound...]
+                guard let open = tail.firstIndex(of: "{"),
+                      let object = jsonObject(in: tail, from: open) else { continue }
+                results.append(object)
             }
-
-            guard let close else { continue }
-            let jsonText = String(tail[open...close])
-            guard let data = jsonText.data(using: .utf8),
-                  let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                continue
-            }
-            results.append(object)
         }
 
         return results
+    }
+
+    private func jsonObject(in text: Substring, from open: String.Index) -> [String: Any]? {
+        var depth = 0
+        var inString = false
+        var escaped = false
+        var close: String.Index?
+
+        for index in text[open...].indices {
+            let character = text[index]
+            if inString {
+                if escaped {
+                    escaped = false
+                } else if character == "\\" {
+                    escaped = true
+                } else if character == "\"" {
+                    inString = false
+                }
+                continue
+            }
+            if character == "\"" {
+                inString = true
+            } else if character == "{" {
+                depth += 1
+            } else if character == "}" {
+                depth -= 1
+                if depth == 0 {
+                    close = index
+                    break
+                }
+            }
+        }
+
+        guard let close else { return nil }
+        let jsonText = String(text[open...close])
+        guard let data = jsonText.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        return object
     }
 
     private func collect(from value: Any, into result: inout DouyinDetail, context: String = "") {
@@ -178,12 +202,12 @@ struct DouyinParser: PlatformParser {
 
                 let nextContext = "\(context) \(lower)"
                 if let strings = child as? [String],
-                   ["url_list", "urls", "image_urls"].contains(lower) {
+                   ["url_list", "urls", "image_urls", "play_url_list", "play_addr_list"].contains(lower) {
                     for value in strings {
                         add(value, context: nextContext, to: &result)
                     }
                 } else if let string = child as? String,
-                          ["url", "display_url", "origin_url", "download_url"].contains(lower) {
+                          ["url", "display_url", "origin_url", "download_url", "play_url", "video_url", "source_url", "src", "uri"].contains(lower) {
                     add(string, context: nextContext, to: &result)
                 } else {
                     collect(from: child, into: &result, context: nextContext)
@@ -200,10 +224,16 @@ struct DouyinParser: PlatformParser {
     }
 
     private func add(_ raw: String, context: String, to result: inout DouyinDetail) {
-        let cleaned = raw
+        var cleaned = raw
             .replacingOccurrences(of: #"\/"#, with: "/")
             .replacingOccurrences(of: #"\u002F"#, with: "/")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        let lowerCleaned = cleaned.lowercased()
+        if !lowerCleaned.contains("://"),
+           cleaned.hasPrefix("/"),
+           lowerCleaned.contains("/play/") || lowerCleaned.contains("/video/") {
+            cleaned = "https://aweme.snssdk.com" + cleaned
+        }
         guard let url = URL(string: cleaned),
               let scheme = url.scheme?.lowercased(),
               ["http", "https"].contains(scheme) else { return }
@@ -211,6 +241,9 @@ struct DouyinParser: PlatformParser {
         let host = url.host()?.lowercased() ?? ""
         let path = url.path.lowercased()
         let ext = url.pathExtension.lowercased()
+        let isPageHost = host == "douyin.com" || host.hasSuffix(".douyin.com")
+            || host == "iesdouyin.com" || host.hasSuffix(".iesdouyin.com")
+        if isPageHost, !path.contains("/play/") { return }
 
         if result.sourceID == nil {
             if let value = firstCapture(pattern: #"(\d{8,})"#, in: context) {
@@ -218,9 +251,15 @@ struct DouyinParser: PlatformParser {
             }
         }
 
+        let contextLower = context.lowercased()
+        let imageContext = contextLower.contains("image")
+            || contextLower.contains("cover")
+            || contextLower.contains("poster")
+            || contextLower.contains("thumbnail")
         let isImageHost = host.contains("douyinpic") || host.contains("byteimg")
         let isImagePath = path.contains("aweme_images")
             || ["jpg", "jpeg", "png", "webp", "awebp", "image", "gif", "apng"].contains(ext)
+            || imageContext
         if isImageHost && isImagePath,
            !path.contains("avatar"),
            !path.contains("image-cut-tos-priv"),
@@ -228,10 +267,10 @@ struct DouyinParser: PlatformParser {
             result.images.append(url)
         }
 
-        let isVideo = host.contains("douyinvod")
-            || ["mp4", "m3u8"].contains(ext)
-            || path.contains("/video/")
-        if isVideo, !result.videos.contains(url) {
+        let isVideoHost = host.contains("douyinvod") || host.contains("snssdk") || host.contains("ixigua")
+        let isVideoExt = ["mp4", "m3u8"].contains(ext)
+        let isVideoPath = path.contains("/video/") || path.contains("/play/")
+        if (isVideoHost || isVideoExt || isVideoPath), !result.videos.contains(url) {
             result.videos.append(url)
         }
     }

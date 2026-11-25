@@ -264,6 +264,8 @@ enum HTMLMetadataExtractor {
         }
         if (host.contains("bilivideo") || host.contains("sns-video") || host.contains("douyinvod"))
             && (path.isEmpty || path == "/") { return false }
+        if (host.contains("snssdk") || host.contains("ixigua"))
+            && (path.contains("/play/") || path.contains("/video/")) { return true }
         return ["mp4", "m3u8", "mov"].contains(ext)
             || host.contains("bilivideo")
             || host.contains("sns-video")

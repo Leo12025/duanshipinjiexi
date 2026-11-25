@@ -74,16 +74,8 @@ struct HomeView: View {
             .sheet(isPresented: $showingFollows) {
                 FollowListView()
             }
-            .onAppear {
-                guard let url = externalInput else { return }
-                inputText = url.absoluteString
-                externalInput = nil
-            }
-            .onChange(of: externalInput) { _, newValue in
-                guard let url = newValue else { return }
-                inputText = url.absoluteString
-                externalInput = nil
-            }
+            .onAppear { consumeExternalInput() }
+            .onChange(of: externalInput) { _, _ in consumeExternalInput() }
         }
     }
 
@@ -282,7 +274,17 @@ struct HomeView: View {
         }
     }
 
-    private func ingest() async {
+    private func consumeExternalInput() {
+        guard let url = externalInput else { return }
+        externalInput = nil
+        inputText = url.absoluteString
+        Task { await ingest(text: url.absoluteString) }
+    }
+
+    private func ingest(text override: String? = nil) async {
+        let textToParse = override ?? inputText
+        guard !textToParse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
         isParsing = true
         parseMessage = nil
         parseFailed = false
@@ -291,7 +293,7 @@ struct HomeView: View {
         defer { isParsing = false }
 
         do {
-            let outcome = try await LinkIngestService.ingest(text: inputText, modelContext: modelContext)
+            let outcome = try await LinkIngestService.ingest(text: textToParse, modelContext: modelContext)
             parseMessage = outcome.message
             existingItem = outcome.isNew ? nil : outcome.item
             inputText = ""

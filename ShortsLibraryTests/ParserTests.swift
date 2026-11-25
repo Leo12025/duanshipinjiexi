@@ -61,6 +61,26 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(metadata.imageURLs.contains { $0.host() == "p23.a.yximgs.com" })
     }
 
+    func testDouyinDetailExtractionFromRouterData() {
+        let html = #"""
+        <script>window._ROUTER_DATA = {"aweme_detail":{"aweme_id":"7711741462283352058","video":{"play_addr":{"url_list":["https://v3-web.douyinvod.com/video.mp4"]}},"image_posters":{"url_list":["https://p3.douyinpic.com/obj/aweme_images/cover.jpg"]}}}</script>
+        """#
+        let detail = DouyinParser().extractDetail(from: html)
+        XCTAssertEqual(detail.sourceID, "7711741462283352058")
+        XCTAssertTrue(detail.videos.contains { $0.absoluteString.contains("douyinvod.com/video.mp4") })
+        XCTAssertTrue(detail.images.contains { $0.absoluteString.contains("douyinpic.com") })
+    }
+
+    func testDouyinRelativePlayURI() {
+        let html = #"""
+        <script>window._ROUTER_DATA = {"aweme_detail":{"video":{"play_addr":{"uri":"/aweme/v1/play/?video_id=abc"}}}}</script>
+        """#
+        let detail = DouyinParser().extractDetail(from: html)
+        XCTAssertTrue(detail.videos.contains {
+            $0.host() == "aweme.snssdk.com" && $0.path.contains("/play/")
+        })
+    }
+
     func testQualityHintFromStructuredJSON() {
         let html = #"""
         {"url":"https://cdn.example.com/video.mp4","width":1920,"height":1080,"bitrate":3000000}
