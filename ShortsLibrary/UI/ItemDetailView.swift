@@ -9,6 +9,7 @@ struct ItemDetailView: View {
     @Bindable var item: LibraryItem
 
     @State private var showingActivity = false
+    @State private var showingTextLinkShare = false
     @State private var showingDelete = false
     @State private var toast: String?
     @State private var isSaving = false
@@ -60,12 +61,20 @@ struct ItemDetailView: View {
 
                 VStack(spacing: 10) {
                     Button {
-                        showingActivity = true
+                        showingTextLinkShare = true
                     } label: {
-                        Label("分享 / 导出到备忘录", systemImage: "square.and.arrow.up")
+                        Label("分享文字 + 链接", systemImage: "square.and.arrow.up.on.square")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+
+                    Button {
+                        showingActivity = true
+                    } label: {
+                        Label("分享媒体文件 / 导出到备忘录", systemImage: "square.and.arrow.up")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
 
                     Button {
                         isSaving = true
@@ -89,7 +98,7 @@ struct ItemDetailView: View {
                         Button {
                             retryMedia()
                         } label: {
-                            Label("重试下载", systemImage: "arrow.triangle.2.circlepath")
+                            Label(item.needsAudioMux ? "修复无声" : "重试下载", systemImage: "arrow.triangle.2.circlepath")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)
@@ -99,6 +108,16 @@ struct ItemDetailView: View {
                                 .font(.caption)
                                 .foregroundStyle(.red)
                         }
+                    }
+
+                    if item.kindEnum == .video, let pageURL = item.pageURL {
+                        Button {
+                            Task { await reparse(pageURL: pageURL) }
+                        } label: {
+                            Label("重新解析并修复", systemImage: "arrow.triangle.2.circlepath.circle")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
                     }
 
                     Button(role: .destructive) {
@@ -126,6 +145,9 @@ struct ItemDetailView: View {
         }
         .sheet(isPresented: $showingActivity) {
             ActivityView(items: shareItems)
+        }
+        .sheet(isPresented: $showingTextLinkShare) {
+            ActivityView(items: SharePayload.textAndLinkItems(for: item))
         }
         .alert("确认删除", isPresented: $showingDelete) {
             Button("取消", role: .cancel) {}
@@ -218,9 +240,20 @@ struct ItemDetailView: View {
         dismiss()
     }
 
+    private func reparse(pageURL: URL) async {
+        do {
+            ParseCache.clear()
+            try await LinkIngestService.ingest(url: pageURL, modelContext: modelContext)
+            toast = "已重新解析，正在修复音轨"
+        } catch {
+            toast = error.localizedDescription
+        }
+    }
+
     private func retryMedia() {
+        let isAudioRepair = item.needsAudioMux
         MediaRetryService.enqueueRetry(item: item, in: modelContext)
-        toast = "已加入下载队列"
+        toast = isAudioRepair ? "已开始修复音轨" : "已加入下载队列"
     }
 }
 

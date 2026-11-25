@@ -46,6 +46,7 @@ enum LibraryBackup {
                     resolution: item.resolution,
                     byteSize: item.byteSize,
                     sourceVideoURLString: item.sourceVideoURLString,
+                    sourceVideoFallbackURLStrings: item.sourceVideoFallbackURLStrings,
                     sourceAudioURLString: item.sourceAudioURLString,
                     sourceCoverURLString: item.sourceCoverURLString,
                     sourceImageURLStrings: item.sourceImageURLStrings,
@@ -141,6 +142,7 @@ enum LibraryBackup {
             item.resolution = saved.resolution
             item.byteSize = saved.byteSize
             item.sourceVideoURLString = saved.sourceVideoURLString
+            item.sourceVideoFallbackURLStrings = saved.sourceVideoFallbackURLStrings ?? []
             item.sourceAudioURLString = saved.sourceAudioURLString
             item.sourceCoverURLString = saved.sourceCoverURLString
             item.sourceImageURLStrings = saved.sourceImageURLStrings
@@ -283,6 +285,7 @@ private struct LibraryBackupItem: Codable {
     let resolution: String?
     let byteSize: Int64?
     let sourceVideoURLString: String?
+    let sourceVideoFallbackURLStrings: [String]?
     let sourceAudioURLString: String?
     let sourceCoverURLString: String?
     let sourceImageURLStrings: [String]

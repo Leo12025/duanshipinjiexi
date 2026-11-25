@@ -67,7 +67,9 @@ final class ParserTests: XCTestCase {
         """#
         let detail = DouyinParser().extractDetail(from: html)
         XCTAssertEqual(detail.sourceID, "7711741462283352058")
-        XCTAssertTrue(detail.videos.contains { $0.absoluteString.contains("douyinvod.com/video.mp4") })
+        XCTAssertTrue(detail.videos.contains {
+            $0.url.absoluteString.contains("douyinvod.com/video.mp4") && $0.context.contains("play_addr")
+        })
         XCTAssertTrue(detail.images.contains { $0.absoluteString.contains("douyinpic.com") })
     }
 
@@ -77,7 +79,65 @@ final class ParserTests: XCTestCase {
         """#
         let detail = DouyinParser().extractDetail(from: html)
         XCTAssertTrue(detail.videos.contains {
-            $0.host() == "aweme.snssdk.com" && $0.path.contains("/play/")
+            $0.url.host() == "aweme.snssdk.com" && $0.url.path.contains("/play/")
+        })
+    }
+
+    func testNoWatermarkCandidatePreferred() {
+        let cleanURL = URL(string: "https://v3-web.douyinvod.com/video/clean.mp4")!
+        let watermarkedURL = URL(string: "https://v3-web.douyinvod.com/video/download.mp4")!
+        let clean = MediaQualityHeuristic.videoCandidate(
+            for: cleanURL,
+            sourceField: "play_addr",
+            prefersNoWatermark: true
+        )
+        let watermarked = MediaQualityHeuristic.videoCandidate(
+            for: watermarkedURL,
+            sourceField: "download_addr",
+            isWatermarked: true
+        )
+        let parsed = ParsedMedia(
+            source: .douyin,
+            sourceId: "7711741462283352058",
+            kind: .video,
+            title: "测试",
+            author: nil,
+            caption: nil,
+            pageURL: URL(string: "https://www.douyin.com/video/7711741462283352058")!,
+            coverURL: nil,
+            images: [],
+            videos: [watermarked, clean],
+            audioURL: nil,
+            needsAudioMux: false
+        )
+
+        XCTAssertEqual(parsed.bestVideo?.url, cleanURL)
+        XCTAssertEqual(parsed.fallbackVideos.first?.url, watermarkedURL)
+    }
+
+    func testDouyinAudioExtraction() {
+        let html = #"""
+        <script>window._ROUTER_DATA = {"aweme_detail":{"video":{"play_addr":{"url_list":["https://v3-web.douyinvod.com/video.mp4"]}},"music_info":{"audio_url":{"url_list":["https://sf1-cdn-tos.douyinstatic.com/obj/audio.mp3"]}}}}</script>
+        """#
+        let detail = DouyinParser().extractDetail(from: html)
+        XCTAssertEqual(detail.audioURL?.pathExtension, "mp3")
+        XCTAssertTrue(detail.videos.contains {
+            $0.url.absoluteString.contains("douyinvod.com/video.mp4")
+        })
+    }
+
+    func testDouyinPlaywmVariant() {
+        let html = #"""
+        <script>window._ROUTER_DATA = {"aweme_detail":{"download_addr":{"url_list":["https://aweme.snssdk.com/aweme/v1/playwm/?video_id=abc"]}}}</script>
+        """#
+        let detail = DouyinParser().extractDetail(from: html)
+        XCTAssertTrue(detail.videos.contains {
+            $0.url.path.contains("/play/")
+                && $0.context.contains("play_addr")
+                && $0.isConvertedNoWatermark
+        })
+        XCTAssertTrue(detail.videos.contains {
+            $0.url.path.contains("/playwm/") && $0.context.contains("download_addr")
         })
     }
 
@@ -95,6 +155,30 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(hint?.height, 1080)
         let candidate = MediaQualityHeuristic.videoCandidate(for: url, hint: hint)
         XCTAssertEqual(candidate.quality, "1920x1080")
+    }
+
+    func testShareTextAndLinkPayload() {
+        let item = LibraryItem(
+            source: .douyin,
+            sourceId: "7711741462283352058",
+            kind: .video,
+            title: "标题",
+            author: nil,
+            caption: "  原始文案  ",
+            pageURL: URL(string: "https://www.douyin.com/video/7711741462283352058")!
+        )
+        let expected = "原始文案\nhttps://www.douyin.com/video/7711741462283352058"
+        XCTAssertEqual(SharePayload.textAndLink(for: item), expected)
+
+        let items = SharePayload.textAndLinkItems(for: item)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items.first as? String, expected)
+
+        item.caption = ""
+        XCTAssertEqual(
+            SharePayload.textAndLink(for: item),
+            "标题\nhttps://www.douyin.com/video/7711741462283352058"
+        )
     }
 
     func testKindResolution() {

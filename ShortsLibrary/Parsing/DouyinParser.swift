@@ -9,8 +9,14 @@ struct DouyinParser: PlatformParser {
         "RENDER_DATA", "_ROUTER_DATA", "_SSR_DATA"
     ]
 
+    struct VideoSource {
+        let url: URL
+        let context: String
+        var isConvertedNoWatermark: Bool = false
+    }
+
     func parse(url: URL) async throws -> ParsedMedia {
-        let (html, finalURL) = try await PublicPageLoader.load(url: url)
+        let (html, finalURL) = try await PublicPageLoader.loadWithoutLoginCheck(url: url)
         let metadata = HTMLMetadataExtractor.extract(html: html, finalURL: finalURL)
         let detail = extractDetail(from: html)
 
@@ -21,21 +27,47 @@ struct DouyinParser: PlatformParser {
         }
 
         let isVideoPage = Self.isVideoPage(finalURL)
+        let audioURL = detail.audioURL ?? metadata.audioURLs.first
 
-        var videoURLs = metadata.videoURLs + detail.videos
         var imageURLs = isVideoPage ? detail.images : metadata.imageURLs + detail.images
-        videoURLs = unique(videoURLs)
         imageURLs = unique(imageURLs)
 
-        let videos = videoURLs.map {
-            MediaQualityHeuristic.videoCandidate(for: $0, hint: metadata.videoQualityHints[$0])
+        var videoSources: [VideoSource] = []
+        for url in metadata.videoURLs {
+            if let clean = Self.noWatermarkVariant(of: url) {
+                videoSources.append(VideoSource(
+                    url: clean,
+                    context: "metadata play_addr",
+                    isConvertedNoWatermark: true
+                ))
+                videoSources.append(VideoSource(url: url, context: "metadata download_addr"))
+            } else {
+                videoSources.append(VideoSource(url: url, context: "metadata"))
+            }
+        }
+        videoSources.append(contentsOf: detail.videos.filter {
+            audioURL != nil || !$0.isConvertedNoWatermark
+        })
+        videoSources = uniqueVideoSources(videoSources)
+
+        let videos = videoSources.map { source in
+            MediaQualityHeuristic.videoCandidate(
+                for: source.url,
+                hint: metadata.videoQualityHints[source.url],
+                sourceField: source.context,
+                prefersNoWatermark: Self.prefersNoWatermark(source.context),
+                isWatermarked: Self.isWatermarked(source.context)
+            )
         }
         let images = MediaQualityHeuristic.sortedImages(imageURLs)
-        guard !videos.isEmpty || !images.isEmpty else {
+        if (videos.isEmpty && images.isEmpty) || (isVideoPage && videos.isEmpty) {
+            if PublicPageLoader.requiresLogin(html: html) {
+                throw AppError.loginRequired(MediaSource.douyin.displayName)
+            }
+            if !videos.isEmpty || !images.isEmpty {
+                throw AppError.parsingFailed("未能提取抖音视频地址，请稍后重试")
+            }
             throw AppError.noMedia
-        }
-        if isVideoPage, videos.isEmpty {
-            throw AppError.parsingFailed("未能提取抖音视频地址，请稍后重试")
         }
 
         return ParsedMedia(
@@ -49,8 +81,8 @@ struct DouyinParser: PlatformParser {
             coverURL: metadata.image ?? MediaQualityHeuristic.bestCover(from: images),
             images: images,
             videos: videos,
-            audioURL: nil,
-            needsAudioMux: false
+            audioURL: audioURL,
+            needsAudioMux: audioURL != nil
         )
     }
 
@@ -86,7 +118,8 @@ struct DouyinParser: PlatformParser {
         var author: String?
         var description: String?
         var images: [URL] = []
-        var videos: [URL] = []
+        var videos: [VideoSource] = []
+        var audioURL: URL?
     }
 
     func extractDetail(from html: String) -> DouyinDetail {
@@ -108,7 +141,7 @@ struct DouyinParser: PlatformParser {
         }
 
         result.images = unique(result.images)
-        result.videos = unique(result.videos)
+        result.videos = uniqueVideoSources(result.videos)
         return result
     }
 
@@ -207,7 +240,7 @@ struct DouyinParser: PlatformParser {
                         add(value, context: nextContext, to: &result)
                     }
                 } else if let string = child as? String,
-                          ["url", "display_url", "origin_url", "download_url", "play_url", "video_url", "source_url", "src", "uri"].contains(lower) {
+                          ["url", "display_url", "origin_url", "download_url", "play_url", "video_url", "source_url", "src", "uri", "audio_url", "music_url", "bgm_url"].contains(lower) {
                     add(string, context: nextContext, to: &result)
                 } else {
                     collect(from: child, into: &result, context: nextContext)
@@ -231,7 +264,8 @@ struct DouyinParser: PlatformParser {
         let lowerCleaned = cleaned.lowercased()
         if !lowerCleaned.contains("://"),
            cleaned.hasPrefix("/"),
-           lowerCleaned.contains("/play/") || lowerCleaned.contains("/video/") {
+           lowerCleaned.contains("/play/") || lowerCleaned.contains("/video/")
+            || lowerCleaned.contains("/audio") || lowerCleaned.contains("/music") {
             cleaned = "https://aweme.snssdk.com" + cleaned
         }
         guard let url = URL(string: cleaned),
@@ -256,6 +290,11 @@ struct DouyinParser: PlatformParser {
             || contextLower.contains("cover")
             || contextLower.contains("poster")
             || contextLower.contains("thumbnail")
+        let audioContext = contextLower.contains("audio")
+            || contextLower.contains("music")
+            || contextLower.contains("bgm")
+        let isAudioExt = ["m4a", "mp3", "aac", "wav", "flac"].contains(ext)
+        let isAudioPath = path.contains("/audio") || path.contains("/music")
         let isImageHost = host.contains("douyinpic") || host.contains("byteimg")
         let isImagePath = path.contains("aweme_images")
             || ["jpg", "jpeg", "png", "webp", "awebp", "image", "gif", "apng"].contains(ext)
@@ -267,16 +306,85 @@ struct DouyinParser: PlatformParser {
             result.images.append(url)
         }
 
+        if (audioContext || isAudioExt || isAudioPath), !imageContext {
+            if result.audioURL == nil { result.audioURL = url }
+            return
+        }
+
         let isVideoHost = host.contains("douyinvod") || host.contains("snssdk") || host.contains("ixigua")
         let isVideoExt = ["mp4", "m3u8"].contains(ext)
         let isVideoPath = path.contains("/video/") || path.contains("/play/")
-        if (isVideoHost || isVideoExt || isVideoPath), !result.videos.contains(url) {
-            result.videos.append(url)
+        if isVideoHost || isVideoExt || isVideoPath {
+            if let clean = Self.noWatermarkVariant(of: url) {
+                result.videos.append(VideoSource(
+                    url: clean,
+                    context: "\(context) play_addr",
+                    isConvertedNoWatermark: true
+                ))
+                result.videos.append(VideoSource(url: url, context: "\(context) download_addr"))
+            } else {
+                result.videos.append(VideoSource(url: url, context: context))
+            }
         }
     }
 
     private func unique(_ urls: [URL]) -> [URL] {
         URL.dedupeMedia(urls)
+    }
+
+    private static func noWatermarkVariant(of url: URL) -> URL? {
+        let host = url.host()?.lowercased() ?? ""
+        guard url.path.lowercased().contains("/playwm/"),
+              host.contains("snssdk") || host.contains("douyin") || host.contains("iesdouyin"),
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        components.path = components.path.replacingOccurrences(
+            of: "/playwm/",
+            with: "/play/",
+            options: [.caseInsensitive]
+        )
+        return components.url
+    }
+
+    private static func prefersNoWatermark(_ context: String) -> Bool {
+        let lower = context.lowercased()
+        return lower.contains("play_addr")
+            || lower.contains("bitrate")
+            || lower.contains("play_url")
+            || lower.contains("video_url")
+            || lower.contains("source_url")
+            || lower.contains("uri")
+            || (lower.contains("/play/") && !lower.contains("download"))
+    }
+
+    private static func isWatermarked(_ context: String) -> Bool {
+        let lower = context.lowercased()
+        let hasWatermarkSource = lower.contains("download") || lower.contains("watermark")
+        let hasCleanSource = lower.contains("play_addr") || lower.contains("bitrate")
+        return hasWatermarkSource && !hasCleanSource
+    }
+
+    private static func videoContextScore(_ context: String) -> Int {
+        if isWatermarked(context) { return 0 }
+        if prefersNoWatermark(context) { return 2 }
+        return 1
+    }
+
+    private func uniqueVideoSources(_ sources: [VideoSource]) -> [VideoSource] {
+        var order: [URL] = []
+        var best: [URL: VideoSource] = [:]
+
+        for source in sources {
+            if let existing = best[source.url] {
+                if Self.videoContextScore(source.context) > Self.videoContextScore(existing.context) {
+                    best[source.url] = source
+                }
+            } else {
+                order.append(source.url)
+                best[source.url] = source
+            }
+        }
+
+        return order.compactMap { best[$0] }
     }
 
     private func firstCapture(pattern: String, in text: String) -> String? {

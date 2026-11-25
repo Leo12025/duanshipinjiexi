@@ -1,6 +1,20 @@
 import SwiftUI
 import UIKit
 
+enum SharePayload {
+    static func textAndLink(for item: LibraryItem) -> String {
+        let caption = item.caption?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = caption.isEmpty ? title : caption
+        guard let link = item.pageURL?.absoluteString, !link.isEmpty else { return text }
+        return "\(text)\n\(link)"
+    }
+
+    static func textAndLinkItems(for item: LibraryItem) -> [Any] {
+        [textAndLink(for: item)]
+    }
+}
+
 struct ActivityView: UIViewControllerRepresentable {
     let items: [Any]
 

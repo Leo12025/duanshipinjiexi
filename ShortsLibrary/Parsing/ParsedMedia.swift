@@ -6,6 +6,9 @@ struct VideoCandidate {
     let width: Int?
     let height: Int?
     let bitrate: Int?
+    var sourceField: String? = nil
+    var prefersNoWatermark: Bool = false
+    var isWatermarked: Bool = false
 
     var pixelCount: Int {
         (width ?? 0) * (height ?? 0)
@@ -20,7 +23,13 @@ struct VideoQualityHint {
 }
 
 enum MediaQualityHeuristic {
-    static func videoCandidate(for url: URL, hint: VideoQualityHint? = nil) -> VideoCandidate {
+    static func videoCandidate(
+        for url: URL,
+        hint: VideoQualityHint? = nil,
+        sourceField: String? = nil,
+        prefersNoWatermark: Bool = false,
+        isWatermarked: Bool = false
+    ) -> VideoCandidate {
         let text = url.absoluteString.lowercased()
         var width = hint?.width
         var height = hint?.height
@@ -50,7 +59,10 @@ enum MediaQualityHeuristic {
             quality: quality,
             width: width,
             height: height,
-            bitrate: bitrate
+            bitrate: bitrate,
+            sourceField: sourceField,
+            prefersNoWatermark: prefersNoWatermark,
+            isWatermarked: isWatermarked
         )
     }
 
@@ -123,12 +135,28 @@ struct ParsedMedia {
     let audioURL: URL?
     let needsAudioMux: Bool
 
+    private static func rank(_ candidate: VideoCandidate) -> (Int, Int, Int, Int, Int) {
+        let watermarkPriority = candidate.isWatermarked ? 0 : (candidate.prefersNoWatermark ? 2 : 1)
+        let ext = candidate.url.pathExtension.lowercased()
+        let direct = ext == "mp4" ? 2 : (ext == "m3u8" ? 0 : 1)
+        return (
+            watermarkPriority,
+            direct,
+            candidate.pixelCount,
+            candidate.bitrate ?? 0,
+            candidate.quality.isEmpty ? 0 : 1
+        )
+    }
+
+    var orderedVideos: [VideoCandidate] {
+        videos.sorted { Self.rank($0) > Self.rank($1) }
+    }
+
     var bestVideo: VideoCandidate? {
-        func rank(_ candidate: VideoCandidate) -> (Int, Int, Int, Int) {
-            let ext = candidate.url.pathExtension.lowercased()
-            let direct = ext == "mp4" ? 2 : (ext == "m3u8" ? 0 : 1)
-            return (direct, candidate.pixelCount, candidate.bitrate ?? 0, candidate.quality.isEmpty ? 0 : 1)
-        }
-        return videos.max { rank($0) < rank($1) }
+        orderedVideos.first
+    }
+
+    var fallbackVideos: [VideoCandidate] {
+        Array(orderedVideos.dropFirst())
     }
 }

@@ -312,7 +312,10 @@ struct LibraryListView: View {
                             item.isFavorite.toggle()
                             save()
                         }
-                        Button("分享") {
+                        Button("分享文字 + 链接") {
+                            shareItems = SharePayload.textAndLinkItems(for: item)
+                        }
+                        Button("分享媒体文件") {
                             shareItems = Self.sharePayload(for: item)
                         }
                         if item.needsRetry {

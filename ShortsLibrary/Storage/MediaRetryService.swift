@@ -40,42 +40,35 @@ enum MediaRetryService {
         }
 
         if item.kindEnum == .video,
-           let video = item.sourceVideoURLString,
-           let url = URL(string: video),
+           item.needsAudioMux,
+           let existingVideo = item.videoFile,
+           existingVideo.existsOnDisk {
+            Task {
+                await Self.muxExistingVideo(
+                    item: item,
+                    video: existingVideo.fileURL,
+                    context: context,
+                    markFailure: markFailure
+                )
+            }
+        }
+
+        if item.kindEnum == .video,
            item.videoFile?.existsOnDisk != true {
-            let relative = AppPaths.relativePath(source: item.source, sourceId: item.sourceId, filename: "video.mp4")
-            let destination = AppPaths.root.appendingPathComponent(relative)
-            DownloadQueue.shared.enqueue(
-                url: url,
-                destination: destination,
-                label: "视频 · \(item.title)",
-                onFinish: { location in
-                    do {
-                        try await Self.muxIfNeeded(item: item, video: location, destination: destination)
-                    } catch {
-                        markFailure("音轨合成：\(error.localizedDescription)")
-                    }
-                    let info = await MediaDownloader.probeVideo(at: destination)
-                    if item.videoFile == nil {
-                        LibraryRepository.shared.addFile(
-                            to: item,
-                            relativePath: relative,
-                            role: .video,
-                            mimeType: "video/mp4",
-                            width: info.width,
-                            height: info.height,
-                            in: context
-                        )
-                    }
-                    item.duration = info.duration
-                    if let width = info.width {
-                        item.resolution = "\(width)x\(info.height ?? 0)"
-                    }
-                    item.byteSize = info.byteSize
-                    try? context.save()
-                },
-                onError: markFailure
-            )
+            let candidates = Self.videoCandidates(for: item)
+            if !candidates.isEmpty {
+                let relative = AppPaths.relativePath(source: item.source, sourceId: item.sourceId, filename: "video.mp4")
+                let destination = AppPaths.root.appendingPathComponent(relative)
+                Self.enqueueVideo(
+                    candidates: candidates,
+                    item: item,
+                    context: context,
+                    relative: relative,
+                    destination: destination,
+                    title: item.title,
+                    markFailure: markFailure
+                )
+            }
         }
 
         if item.kindEnum == .audio,
@@ -143,6 +136,75 @@ enum MediaRetryService {
         try? context.save()
     }
 
+    private static func videoCandidates(for item: LibraryItem) -> [URL] {
+        let strings = ([item.sourceVideoURLString].compactMap { $0 } + item.sourceVideoFallbackURLStrings)
+        return URL.dedupeMedia(strings.compactMap(URL.init(string:)))
+    }
+
+    private static func enqueueVideo(
+        candidates: [URL],
+        index: Int = 0,
+        item: LibraryItem,
+        context: ModelContext,
+        relative: String,
+        destination: URL,
+        title: String,
+        markFailure: @escaping @MainActor (String) -> Void
+    ) {
+        guard candidates.indices.contains(index) else {
+            markFailure("视频：所有候选源下载失败")
+            return
+        }
+
+        let url = candidates[index]
+        DownloadQueue.shared.enqueue(
+            url: url,
+            destination: destination,
+            label: index == 0 ? "视频 · \(title)" : "视频源 \(index + 1) · \(title)",
+            onFinish: { location in
+                do {
+                    try await Self.muxIfNeeded(item: item, video: location, destination: destination)
+                } catch {
+                    markFailure("音轨合成：\(error.localizedDescription)")
+                }
+                let info = await MediaDownloader.probeVideo(at: destination)
+                if item.videoFile == nil {
+                    LibraryRepository.shared.addFile(
+                        to: item,
+                        relativePath: relative,
+                        role: .video,
+                        mimeType: "video/mp4",
+                        width: info.width,
+                        height: info.height,
+                        in: context
+                    )
+                }
+                item.duration = info.duration
+                if let width = info.width {
+                    item.resolution = "\(width)x\(info.height ?? 0)"
+                }
+                item.byteSize = info.byteSize
+                try? context.save()
+            },
+            onError: { message in
+                if index + 1 < candidates.count {
+                    Self.enqueueVideo(
+                        candidates: candidates,
+                        index: index + 1,
+                        item: item,
+                        context: context,
+                        relative: relative,
+                        destination: destination,
+                        title: title,
+                        markFailure: markFailure
+                    )
+                } else {
+                    markFailure("视频：\(message)")
+                }
+            }
+        )
+    }
+
     static func retry(item: LibraryItem, in context: ModelContext) async {
         var failures: [String] = []
 
@@ -203,9 +265,8 @@ enum MediaRetryService {
         in context: ModelContext,
         failures: inout [String]
     ) async {
-        guard let string = item.sourceVideoURLString,
-              let url = URL(string: string),
-              item.videoFile?.existsOnDisk != true else { return }
+        let candidates = videoCandidates(for: item)
+        guard !candidates.isEmpty, item.videoFile?.existsOnDisk != true else { return }
 
         let relative = AppPaths.relativePath(
             source: item.source,
@@ -214,28 +275,31 @@ enum MediaRetryService {
         )
         let destination = AppPaths.root.appendingPathComponent(relative)
 
-        do {
-            try await MediaDownloader.download(url: url, to: destination)
-            try await muxIfNeeded(item: item, video: destination, destination: destination)
-            let info = await MediaDownloader.probeVideo(at: destination)
-            if item.videoFile == nil {
-                LibraryRepository.shared.addFile(
-                    to: item,
-                    relativePath: relative,
-                    role: .video,
-                    mimeType: "video/mp4",
-                    width: info.width,
-                    height: info.height,
-                    in: context
-                )
+        for (index, url) in candidates.enumerated() {
+            do {
+                try await MediaDownloader.download(url: url, to: destination)
+                try await muxIfNeeded(item: item, video: destination, destination: destination)
+                let info = await MediaDownloader.probeVideo(at: destination)
+                if item.videoFile == nil {
+                    LibraryRepository.shared.addFile(
+                        to: item,
+                        relativePath: relative,
+                        role: .video,
+                        mimeType: "video/mp4",
+                        width: info.width,
+                        height: info.height,
+                        in: context
+                    )
+                }
+                item.duration = info.duration
+                if let width = info.width {
+                    item.resolution = "\(width)x\(info.height ?? 0)"
+                }
+                item.byteSize = info.byteSize
+                return
+            } catch {
+                failures.append("视频源 \(index + 1)：\(error.localizedDescription)")
             }
-            item.duration = info.duration
-            if let width = info.width {
-                item.resolution = "\(width)x\(info.height ?? 0)"
-            }
-            item.byteSize = info.byteSize
-        } catch {
-            failures.append("视频：\(error.localizedDescription)")
         }
     }
 
@@ -308,6 +372,20 @@ enum MediaRetryService {
             } catch {
                 failures.append("图片 \(index + 1)：\(error.localizedDescription)")
             }
+        }
+    }
+
+    private static func muxExistingVideo(
+        item: LibraryItem,
+        video: URL,
+        context: ModelContext,
+        markFailure: @MainActor (String) -> Void
+    ) async {
+        do {
+            try await muxIfNeeded(item: item, video: video, destination: video)
+            try? context.save()
+        } catch {
+            markFailure("音轨合成：\(error.localizedDescription)")
         }
     }
 

@@ -43,7 +43,7 @@ final class LibraryRepository {
             existing.author = parsed.author
             existing.caption = parsed.caption
             existing.pageURLString = parsed.pageURL.absoluteString
-            existing.sourceVideoURLString = parsed.bestVideo?.url.absoluteString
+            Self.applyVideoSources(from: parsed, to: existing)
             existing.sourceAudioURLString = parsed.audioURL?.absoluteString
             existing.sourceCoverURLString = parsed.coverURL?.absoluteString
             existing.sourceImageURLStrings = parsed.images.map(\.absoluteString)
@@ -61,13 +61,19 @@ final class LibraryRepository {
             caption: parsed.caption,
             pageURL: parsed.pageURL
         )
-        item.sourceVideoURLString = parsed.bestVideo?.url.absoluteString
+        Self.applyVideoSources(from: parsed, to: item)
         item.sourceAudioURLString = parsed.audioURL?.absoluteString
         item.sourceCoverURLString = parsed.coverURL?.absoluteString
         item.sourceImageURLStrings = parsed.images.map(\.absoluteString)
         item.needsAudioMux = parsed.needsAudioMux
         context.insert(item)
         return item
+    }
+
+    private static func applyVideoSources(from parsed: ParsedMedia, to item: LibraryItem) {
+        let ordered = parsed.orderedVideos
+        item.sourceVideoURLString = ordered.first?.url.absoluteString
+        item.sourceVideoFallbackURLStrings = ordered.dropFirst().map(\.url.absoluteString)
     }
 
     @discardableResult

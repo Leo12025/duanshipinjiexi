@@ -1,6 +1,15 @@
 import SwiftUI
 import UIKit
 import AVKit
+import AVFoundation
+
+private enum PlayerAudioSession {
+    static func prepare(mode: AVAudioSession.Mode = .moviePlayback) {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: mode, options: [.duckOthers])
+        try? session.setActive(true, options: .notifyOthersOnDeactivation)
+    }
+}
 
 struct LocalImageView: View {
     let url: URL
@@ -71,9 +80,13 @@ struct VideoPlayerView: UIViewControllerRepresentable {
     let url: URL
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
+        PlayerAudioSession.prepare(mode: .moviePlayback)
         let controller = AVPlayerViewController()
-        controller.player = AVPlayer(url: url)
-        controller.player?.play()
+        let player = AVPlayer(url: url)
+        player.isMuted = false
+        player.volume = 1
+        controller.player = player
+        player.play()
         return controller
     }
 
@@ -84,9 +97,13 @@ struct AudioPlayerView: UIViewControllerRepresentable {
     let url: URL
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
+        PlayerAudioSession.prepare(mode: .default)
         let controller = AVPlayerViewController()
-        controller.player = AVPlayer(url: url)
-        controller.player?.play()
+        let player = AVPlayer(url: url)
+        player.isMuted = false
+        player.volume = 1
+        controller.player = player
+        player.play()
         return controller
     }
 

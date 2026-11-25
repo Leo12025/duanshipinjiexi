@@ -161,7 +161,9 @@ final class DownloadManager {
         if host.contains("bilibili") || host.contains("bilivideo") || host.contains("hdslb") {
             return "https://www.bilibili.com/"
         }
-        if host.contains("douyin") || host.contains("iesdouyin") {
+        if host.contains("douyin") || host.contains("iesdouyin")
+            || host.contains("douyinvod") || host.contains("snssdk")
+            || host.contains("ixigua") {
             return "https://www.douyin.com/"
         }
         if host.contains("kuaishou") || host.contains("chenzhongtech") || host.contains("gifshow")

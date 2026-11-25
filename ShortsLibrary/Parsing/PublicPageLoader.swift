@@ -13,12 +13,17 @@ enum PublicPageLoader {
     ]
 
     static func load(url: URL) async throws -> (String, URL) {
+        let result = try await loadWithoutLoginCheck(url: url)
+        if requiresLogin(html: result.0) {
+            throw AppError.loginRequired(platformName(for: url))
+        }
+        return result
+    }
+
+    static func loadWithoutLoginCheck(url: URL) async throws -> (String, URL) {
         let result = try await loadPage(url: url)
         let lower = result.0.lowercased()
 
-        if loginKeywords.contains(where: { lower.contains($0) }) {
-            throw AppError.loginRequired(platformName(for: url))
-        }
         if rateLimitKeywords.contains(where: { lower.contains($0) }) {
             throw AppError.rateLimited
         }
@@ -28,10 +33,17 @@ enum PublicPageLoader {
         return result
     }
 
+    static func requiresLogin(html: String) -> Bool {
+        let lower = html.lowercased()
+        return loginKeywords.contains { lower.contains($0) }
+    }
+
     private static func loadPage(url: URL) async throws -> (String, URL) {
-        if await LoginSessionManager.shared.isLoggedIn(for: url),
+        let shouldPreferWebView = await LoginSessionManager.shared.isLoggedIn(for: url) || isDouyin(url)
+        if shouldPreferWebView,
            let result = try? await WebViewPageLoader.load(from: url),
-           isUsable(result.0) {
+           isUsable(result.0),
+           !requiresLogin(html: result.0) {
             return result
         }
 
@@ -41,6 +53,12 @@ enum PublicPageLoader {
         }
 
         return try await WebViewPageLoader.load(from: url)
+    }
+
+    private static func isDouyin(_ url: URL) -> Bool {
+        let host = url.host()?.lowercased() ?? ""
+        return host == "douyin.com" || host.hasSuffix(".douyin.com")
+            || host == "iesdouyin.com" || host.hasSuffix(".iesdouyin.com")
     }
 
     private static func isUsable(_ html: String) -> Bool {
