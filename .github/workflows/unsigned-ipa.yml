@@ -1,0 +1,55 @@
+name: Unsigned IPA
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate Xcode project
+        run: python3 generate_xcodeproj.py
+
+      - name: Build unsigned app
+        run: |
+          xcodebuild \
+            -project ShortsLibrary.xcodeproj \
+            -target ShortsLibrary \
+            -configuration Release \
+            -sdk iphoneos \
+            SYMROOT="$GITHUB_WORKSPACE/Build" \
+            OBJROOT="$GITHUB_WORKSPACE/Build/Intermediates" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            VALIDATE_PRODUCT=NO \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          APP="$GITHUB_WORKSPACE/Build/Release-iphoneos/ShortsLibrary.app"
+          test -d "$APP"
+
+          rm -rf "$RUNNER_TEMP/Payload"
+          mkdir -p "$RUNNER_TEMP/Payload"
+          cp -R "$APP" "$RUNNER_TEMP/Payload/ShortsLibrary.app"
+
+          cd "$RUNNER_TEMP"
+          ditto -c -k --sequesterRsrc --keepParent Payload "$GITHUB_WORKSPACE/ShortsLibrary-unsigned.ipa"
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShortsLibrary-unsigned-ipa
+          path: ShortsLibrary-unsigned.ipa
+          if-no-files-found: error
