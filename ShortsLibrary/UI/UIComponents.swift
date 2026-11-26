@@ -61,6 +61,17 @@ struct ItemCard: View {
                 }
             }
 
+            if item.kindEnum == .dynamic {
+                Label("LIVE", systemImage: "livephoto")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(.black.opacity(0.55), in: Capsule())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(8)
+            }
+
             if item.isFavorite {
                 Image(systemName: "heart.fill")
                     .font(.caption)
@@ -81,16 +92,32 @@ struct ItemCard: View {
                     .padding(8)
             }
 
-            if item.kindEnum == .video, let duration = item.duration, duration > 0 {
-                Text(Self.durationText(duration))
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(.black.opacity(0.55), in: Capsule())
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(8)
+            Text(Self.typeBadgeText(for: item))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(.black.opacity(0.6), in: Capsule())
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .padding(8)
+        }
+    }
+
+    private static func typeBadgeText(for item: LibraryItem) -> String {
+        switch item.kindEnum {
+        case .video:
+            if let duration = item.duration, duration > 0 {
+                return "视频 · \(durationText(duration))"
             }
+            return "视频"
+        case .image:
+            return "图片"
+        case .imageText:
+            return "图文 · \(item.sourceImageURLStrings.count)张"
+        case .dynamic:
+            return "动态图片 · \(item.sourceImageURLStrings.count)张"
+        case .audio:
+            return "音频"
         }
     }
 

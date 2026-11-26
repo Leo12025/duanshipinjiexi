@@ -34,7 +34,7 @@ enum MediaKind: String, CaseIterable, Identifiable {
         case .video: return "视频"
         case .image: return "图片"
         case .imageText: return "图文"
-        case .dynamic: return "动态"
+        case .dynamic: return "动态图片"
         case .audio: return "音频"
         }
     }

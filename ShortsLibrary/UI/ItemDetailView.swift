@@ -23,9 +23,14 @@ struct ItemDetailView: View {
                     Text(item.title)
                         .font(.title3.weight(.semibold))
 
-                    HStack {
+                    HStack(spacing: 8) {
                         Label(item.sourceEnum.displayName, systemImage: item.sourceEnum.icon)
-                        Text(item.kindEnum.displayName)
+                        Text(Self.typeLabel(for: item))
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor.opacity(0.14), in: Capsule())
+                            .foregroundStyle(Color.accentColor)
                         if let author = item.author {
                             Text("作者：\(author)")
                         }
@@ -199,6 +204,15 @@ struct ItemDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private static func typeLabel(for item: LibraryItem) -> String {
+        switch item.kindEnum {
+        case .imageText, .dynamic:
+            return "\(item.kindEnum.displayName) · \(item.sourceImageURLStrings.count)张"
+        default:
+            return item.kindEnum.displayName
         }
     }
 
