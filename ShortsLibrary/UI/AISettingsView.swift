@@ -37,6 +37,11 @@ struct AISettingsView: View {
                                 Text(item).tag(item)
                             }
                         }
+                        if !AISettings.supportsImages(providerID: providerID, model: model) {
+                            Text("当前为纯文本模型，不会发送关键帧画面。")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     if preset.id == AIProviderPresets.custom.id {
                         TextField("Base URL，例如 https://api.example.com/v1", text: $customBaseURL)
@@ -114,6 +119,7 @@ struct AISettingsView: View {
                 }
             }
             .task {
+                if !preset.models.contains(model) { model = preset.defaultModel }
                 loadAPIKey(for: providerID)
             }
             .onChange(of: providerID) { _, newValue in

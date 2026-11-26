@@ -4,10 +4,18 @@ import XCTest
 final class AISummaryTests: XCTestCase {
     func testPresetRegistry() {
         XCTAssertEqual(AIProviderPresets.defaultID, "qwen")
-        XCTAssertEqual(AIProviderPresets.preset(id: "qwen")?.defaultModel, "qwen3-vl-plus")
+        XCTAssertEqual(AIProviderPresets.preset(id: "qwen")?.defaultModel, "qwen3.8-omni-flash")
         XCTAssertEqual(AIProviderPresets.preset(id: "doubao")?.requiresCustomModel, true)
         XCTAssertEqual(AIProviderPresets.preset(id: "custom")?.requiresCustomModel, true)
         XCTAssertNil(AIProviderPresets.preset(id: "unknown"))
+    }
+
+    func testVisionModelFallback() {
+        XCTAssertTrue(AISettings.supportsImages(providerID: "qwen", model: "qwen3.8-omni-flash"))
+        XCTAssertFalse(AISettings.supportsImages(providerID: "qwen", model: "qwen4-max"))
+        XCTAssertFalse(AISettings.supportsImages(providerID: "qwen", model: "deepseek-v4.1-flash-1017"))
+        XCTAssertFalse(AISettings.supportsImages(providerID: "qwen", model: "kimi-k3.1-pro"))
+        XCTAssertTrue(AISettings.supportsImages(providerID: "openai", model: "gpt-4o"))
     }
 
     func testParseSummaryJSON() {

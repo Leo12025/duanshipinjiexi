@@ -8,17 +8,39 @@ struct AIProviderPreset: Identifiable, Hashable {
     let defaultModel: String
     let note: String
     let requiresCustomModel: Bool
+    let textOnlyModels: [String]
+
+    init(
+        id: String,
+        name: String,
+        baseURL: String,
+        models: [String],
+        defaultModel: String,
+        note: String,
+        requiresCustomModel: Bool,
+        textOnlyModels: [String] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.baseURL = baseURL
+        self.models = models
+        self.defaultModel = defaultModel
+        self.note = note
+        self.requiresCustomModel = requiresCustomModel
+        self.textOnlyModels = textOnlyModels
+    }
 }
 
 enum AIProviderPresets {
     static let qwen = AIProviderPreset(
         id: "qwen",
-        name: "阿里云百炼 Qwen-VL",
+        name: "阿里云百炼（免费额度）",
         baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        models: ["qwen3-vl-plus", "qwen3-vl-max", "qwen3-vl-flash", "qwen-vl-max", "qwen-vl-plus"],
-        defaultModel: "qwen3-vl-plus",
-        note: "中文短视频场景优选，支持图片与视频帧。推荐使用 qwen3-vl-plus，复杂画面再切 Max。",
-        requiresCustomModel: false
+        models: ["qwen3.8-omni-flash", "qwen4-max", "deepseek-v4.1-flash-1017", "kimi-k3.1-pro"],
+        defaultModel: "qwen3.8-omni-flash",
+        note: "omni-flash 为多模态模型，可分析关键帧；其余为纯文本模型，仅用文案总结。免费额度到期时间请在百炼控制台确认。",
+        requiresCustomModel: false,
+        textOnlyModels: ["qwen4-max", "deepseek-v4.1-flash-1017", "kimi-k3.1-pro"]
     )
 
     static let doubao = AIProviderPreset(
@@ -125,6 +147,11 @@ enum AISettings {
         return value.isEmpty ? "简洁摘要" : value
     }
 
+    static func supportsImages(providerID: String, model: String) -> Bool {
+        guard let preset = AIProviderPresets.preset(id: providerID) else { return true }
+        return !preset.textOnlyModels.contains(model)
+    }
+
     static func resolved() throws -> (providerID: String, model: String, baseURL: String, apiKey: String) {
         let defaults = UserDefaults.standard
         let providerID = defaults.string(forKey: AISettingsKey.providerID) ?? AIProviderPresets.defaultID
@@ -141,7 +168,7 @@ enum AISettings {
         } else {
             baseURL = preset.baseURL
             let saved = defaults.string(forKey: AISettingsKey.model) ?? ""
-            model = saved.isEmpty ? preset.defaultModel : saved
+            model = preset.models.contains(saved) ? saved : preset.defaultModel
         }
 
         let trimmedBaseURL = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)

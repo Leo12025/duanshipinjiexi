@@ -77,10 +77,11 @@ final class AISummaryService {
         try? modelContext.save()
 
         do {
-            let images = await imageData(for: item)
-            guard !images.isEmpty else { throw AppError.aiNoMedia }
+            let supportsImages = AISettings.supportsImages(providerID: config.providerID, model: config.model)
+            let images = supportsImages ? await imageData(for: item) : []
+            if supportsImages && images.isEmpty { throw AppError.aiNoMedia }
 
-            let text = Self.userText(for: item)
+            let text = Self.userText(for: item, includeFrames: supportsImages)
             var parts: [AIContentPart] = [.text(text)]
             for data in images {
                 parts.append(.imageBase64(data))
@@ -169,7 +170,7 @@ final class AISummaryService {
         return false
     }
 
-    private static func userText(for item: LibraryItem) -> String {
+    private static func userText(for item: LibraryItem, includeFrames: Bool) -> String {
         var lines: [String] = [
             "标题：\(item.title)",
             "语言：\(AISettings.summaryLanguage)",
@@ -184,7 +185,7 @@ final class AISummaryService {
         if let transcript = item.aiTranscript, !transcript.isEmpty {
             lines.append("音频转写稿：\(transcript)")
         }
-        lines.append("请结合后面的关键帧画面，输出 JSON。")
+        lines.append(includeFrames ? "请结合后面的关键帧画面，输出 JSON。" : "请仅依据以上文字信息，输出 JSON。")
         return lines.joined(separator: "\n")
     }
 
