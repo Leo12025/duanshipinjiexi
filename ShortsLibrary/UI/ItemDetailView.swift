@@ -13,6 +13,9 @@ struct ItemDetailView: View {
     @State private var showingDelete = false
     @State private var toast: String?
     @State private var isSaving = false
+    @State private var showingFullScreenImages = false
+    @State private var fullScreenIndex = 0
+    @State private var showingFullScreenVideo = false
 
     var body: some View {
         ScrollView {
@@ -168,28 +171,72 @@ struct ItemDetailView: View {
         } message: {
             Text(toast ?? "")
         }
+        .fullScreenCover(isPresented: $showingFullScreenImages) {
+            let files = item.imageFiles.filter { $0.existsOnDisk }
+            let videos = item.livePhotoVideoFiles
+                .filter { $0.existsOnDisk }
+                .reduce(into: [:]) { $0[$1.orderIndex] = $1 }
+            FullScreenMediaViewer(
+                files: files,
+                livePhotoVideos: videos,
+                initialIndex: fullScreenIndex,
+                isPresented: $showingFullScreenImages
+            )
+        }
+        .fullScreenCover(isPresented: $showingFullScreenVideo) {
+            NavigationStack {
+                Group {
+                    if let video = item.videoFile, video.existsOnDisk {
+                        VideoPlayerView(url: video.fileURL)
+                    }
+                }
+                .ignoresSafeArea()
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("关闭") { showingFullScreenVideo = false }
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
     private var mediaSection: some View {
         if item.kindEnum == .video, let video = item.videoFile, video.existsOnDisk {
-            VideoPlayerView(url: video.fileURL)
-                .frame(height: 260)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            Button {
+                showingFullScreenVideo = true
+            } label: {
+                VideoPlayerView(url: video.fileURL)
+                    .frame(height: 260)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(6)
+                            .background(.black.opacity(0.5), in: Circle())
+                            .padding(8)
+                    }
+            }
+            .buttonStyle(.plain)
         } else if item.kindEnum == .audio, let audio = item.audioFile, audio.existsOnDisk {
             AudioPlayerView(url: audio.fileURL)
                 .frame(height: 120)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if [.image, .imageText, .dynamic].contains(item.kindEnum),
                   !item.imageFiles.filter({ $0.existsOnDisk }).isEmpty {
-            ImageViewerView(
-                files: item.imageFiles.filter { $0.existsOnDisk },
-                livePhotoVideos: item.livePhotoVideoFiles
-                    .filter { $0.existsOnDisk }
-                    .reduce(into: [:]) { $0[$1.orderIndex] = $1 }
-            )
+            let files = item.imageFiles.filter { $0.existsOnDisk }
+            let videos = item.livePhotoVideoFiles
+                .filter { $0.existsOnDisk }
+                .reduce(into: [:]) { $0[$1.orderIndex] = $1 }
+            ImageViewerView(files: files, livePhotoVideos: videos)
                 .frame(height: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    fullScreenIndex = 0
+                    showingFullScreenImages = true
+                }
         } else if let cover = item.coverFile, cover.existsOnDisk {
             LocalImageView(url: cover.fileURL, animated: cover.isAnimated)
                 .frame(maxHeight: 300)

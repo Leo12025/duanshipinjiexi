@@ -92,18 +92,13 @@ struct ItemCard: View {
                     .padding(8)
             }
 
-            Text(Self.typeBadgeText(for: item))
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(.black.opacity(0.6), in: Capsule())
+            TypeBadge(item: item)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .padding(8)
         }
     }
 
-    private static func typeBadgeText(for item: LibraryItem) -> String {
+    static func typeBadgeText(for item: LibraryItem) -> String {
         switch item.kindEnum {
         case .video:
             if let duration = item.duration, duration > 0 {
@@ -126,6 +121,19 @@ struct ItemCard: View {
         let minutes = total / 60
         let rest = total % 60
         return String(format: "%d:%02d", minutes, rest)
+    }
+}
+
+struct TypeBadge: View {
+    let item: LibraryItem
+
+    var body: some View {
+        Text(ItemCard.typeBadgeText(for: item))
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(.black.opacity(0.6), in: Capsule())
     }
 }
 
@@ -248,8 +256,12 @@ struct RecentItemCard: View {
         VStack(alignment: .leading, spacing: 6) {
             Color.clear
                 .aspectRatio(1, contentMode: .fit)
-                .overlay {
-                    MediaThumbnail(item: item)
+                .overlay(alignment: .bottomTrailing) {
+                    ZStack(alignment: .bottomTrailing) {
+                        MediaThumbnail(item: item)
+                        TypeBadge(item: item)
+                            .padding(6)
+                    }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
