@@ -24,6 +24,7 @@ final class LibraryItem {
     var sourceAudioURLString: String?
     var sourceCoverURLString: String?
     var sourceImageURLStrings: [String]
+    var sourceLivePhotoVideoURLStrings: [String] = []
     var downloadFailed: Bool
     var lastDownloadError: String?
     var needsAudioMux: Bool
@@ -57,6 +58,7 @@ final class LibraryItem {
         self.sourceAudioURLString = nil
         self.sourceCoverURLString = nil
         self.sourceImageURLStrings = []
+        self.sourceLivePhotoVideoURLStrings = []
         self.downloadFailed = false
         self.lastDownloadError = nil
         self.needsAudioMux = false
@@ -101,14 +103,30 @@ final class LibraryItem {
         imageFiles.filter { $0.isAnimated }
     }
 
+    var livePhotoVideoFiles: [MediaFile] {
+        files
+            .filter { $0.role == FileRole.livePhotoVideo.rawValue }
+            .sorted { $0.orderIndex < $1.orderIndex }
+    }
+
+    func livePhotoVideoFile(orderIndex: Int) -> MediaFile? {
+        files.first {
+            $0.role == FileRole.livePhotoVideo.rawValue && $0.orderIndex == orderIndex
+        }
+    }
+
     var needsRetry: Bool {
         if downloadFailed { return true }
         if kindEnum == .video, sourceVideoURLString != nil, videoFile?.existsOnDisk != true { return true }
         if kindEnum == .video, needsAudioMux { return true }
         if kindEnum == .audio, sourceAudioURLString != nil, audioFile?.existsOnDisk != true { return true }
-        if [.image, .imageText, .dynamic].contains(kindEnum),
-           !sourceImageURLStrings.isEmpty,
-           !imageFiles.contains(where: { $0.existsOnDisk }) { return true }
+        if [.image, .imageText, .dynamic].contains(kindEnum) {
+            if !sourceImageURLStrings.isEmpty,
+               !imageFiles.contains(where: { $0.existsOnDisk }) { return true }
+            for (index, string) in sourceLivePhotoVideoURLStrings.enumerated() where !string.isEmpty {
+                if livePhotoVideoFile(orderIndex: index)?.existsOnDisk != true { return true }
+            }
+        }
         return false
     }
 }

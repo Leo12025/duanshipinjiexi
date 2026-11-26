@@ -47,6 +47,7 @@ final class LibraryRepository {
             existing.sourceAudioURLString = parsed.audioURL?.absoluteString
             existing.sourceCoverURLString = parsed.coverURL?.absoluteString
             existing.sourceImageURLStrings = parsed.images.map(\.absoluteString)
+            existing.sourceLivePhotoVideoURLStrings = parsed.livePhotoVideos.map { $0?.absoluteString ?? "" }
             existing.needsAudioMux = parsed.needsAudioMux
             existing.updatedAt = Date()
             return existing
@@ -65,6 +66,7 @@ final class LibraryRepository {
         item.sourceAudioURLString = parsed.audioURL?.absoluteString
         item.sourceCoverURLString = parsed.coverURL?.absoluteString
         item.sourceImageURLStrings = parsed.images.map(\.absoluteString)
+        item.sourceLivePhotoVideoURLStrings = parsed.livePhotoVideos.map { $0?.absoluteString ?? "" }
         item.needsAudioMux = parsed.needsAudioMux
         context.insert(item)
         return item

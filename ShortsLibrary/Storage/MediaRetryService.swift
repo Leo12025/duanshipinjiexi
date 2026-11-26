@@ -130,10 +130,66 @@ enum MediaRetryService {
                     },
                     onError: markFailure
                 )
+
+                let livePhoto = index < item.sourceLivePhotoVideoURLStrings.count
+                    ? item.sourceLivePhotoVideoURLStrings[index] : nil
+                Self.enqueueLivePhotoVideo(
+                    string: livePhoto,
+                    index: index,
+                    item: item,
+                    context: context,
+                    markFailure: markFailure
+                )
             }
         }
 
         try? context.save()
+    }
+
+    private static func enqueueLivePhotoVideo(
+        string: String?,
+        index: Int,
+        item: LibraryItem,
+        context: ModelContext,
+        markFailure: @escaping @MainActor (String) -> Void
+    ) {
+        guard let string, !string.isEmpty, let url = URL(string: string) else { return }
+        guard item.livePhotoVideoFile(orderIndex: index)?.existsOnDisk != true else { return }
+
+        let ext = url.pathExtension.lowercased()
+        let filename = String(format: "live/%02d.%@", index + 1, ext.isEmpty ? "mp4" : ext)
+        let relative = AppPaths.relativePath(source: item.source, sourceId: item.sourceId, filename: filename)
+        let destination = AppPaths.root.appendingPathComponent(relative)
+        DownloadQueue.shared.enqueue(
+            url: url,
+            destination: destination,
+            label: "动态图片 \(index + 1) · \(item.title)",
+            onFinish: { location in
+                finalizeLivePhotoVideo(at: location, orderIndex: index, item: item, context: context)
+                try? context.save()
+            },
+            onError: markFailure
+        )
+    }
+
+    private static func finalizeLivePhotoVideo(
+        at location: URL,
+        orderIndex: Int,
+        item: LibraryItem,
+        context: ModelContext
+    ) {
+        let relative = relativePath(for: location)
+        guard !item.files.contains(where: {
+            $0.role == FileRole.livePhotoVideo.rawValue && $0.orderIndex == orderIndex
+        }) else { return }
+        LibraryRepository.shared.addFile(
+            to: item,
+            relativePath: relative,
+            role: .livePhotoVideo,
+            mimeType: "video/mp4",
+            orderIndex: orderIndex,
+            in: context
+        )
     }
 
     private static func videoCandidates(for item: LibraryItem) -> [URL] {
@@ -339,6 +395,28 @@ enum MediaRetryService {
         }
     }
 
+    private static func retryLivePhotoVideo(
+        string: String?,
+        index: Int,
+        item: LibraryItem,
+        context: ModelContext,
+        failures: inout [String]
+    ) async {
+        guard let string, !string.isEmpty, let url = URL(string: string) else { return }
+        guard item.livePhotoVideoFile(orderIndex: index)?.existsOnDisk != true else { return }
+
+        let ext = url.pathExtension.lowercased()
+        let filename = String(format: "live/%02d.%@", index + 1, ext.isEmpty ? "mp4" : ext)
+        let relative = AppPaths.relativePath(source: item.source, sourceId: item.sourceId, filename: filename)
+        let destination = AppPaths.root.appendingPathComponent(relative)
+        do {
+            try await MediaDownloader.download(url: url, to: destination)
+            finalizeLivePhotoVideo(at: destination, orderIndex: index, item: item, context: context)
+        } catch {
+            failures.append("动态图片 \(index + 1)：\(error.localizedDescription)")
+        }
+    }
+
     private static func retryImages(
         item: LibraryItem,
         in context: ModelContext,
@@ -368,6 +446,14 @@ enum MediaRetryService {
                     orderIndex: index,
                     item: item,
                     context: context
+                )
+                await retryLivePhotoVideo(
+                    string: index < item.sourceLivePhotoVideoURLStrings.count
+                        ? item.sourceLivePhotoVideoURLStrings[index] : nil,
+                    index: index,
+                    item: item,
+                    context: context,
+                    failures: &failures
                 )
             } catch {
                 failures.append("图片 \(index + 1)：\(error.localizedDescription)")

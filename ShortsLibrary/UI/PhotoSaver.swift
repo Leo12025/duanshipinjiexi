@@ -40,6 +40,28 @@ enum PhotoSaver {
         }
     }
 
+    static func saveLivePhotos(_ pairs: [(image: URL, video: URL)]) async throws {
+        guard !pairs.isEmpty else { return }
+        guard await requestPermission() else {
+            throw AppError.fileSystem("没有相册写入权限")
+        }
+        try await withCheckedThrowingContinuation { continuation in
+            PHPhotoLibrary.shared().performChanges {
+                for pair in pairs {
+                    let request = PHAssetCreationRequest.forAsset()
+                    request.addResource(with: .photo, fileURL: pair.image, options: PHAssetResourceCreationOptions())
+                    request.addResource(with: .video, fileURL: pair.video, options: PHAssetResourceCreationOptions())
+                }
+            } completionHandler: { success, error in
+                if success {
+                    continuation.resume(returning: ())
+                } else {
+                    continuation.resume(throwing: error ?? AppError.fileSystem("动态图片保存失败"))
+                }
+            }
+        }
+    }
+
     private static func requestPermission() async -> Bool {
         let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
         switch status {

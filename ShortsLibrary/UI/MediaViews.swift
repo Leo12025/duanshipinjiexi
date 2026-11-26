@@ -61,15 +61,90 @@ struct AnimatedImageView: UIViewRepresentable {
     }
 }
 
+struct LoopingVideoPlayerView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> UIView {
+        PlayerAudioSession.prepare(mode: .moviePlayback)
+        let player = AVQueuePlayer()
+        player.isMuted = true
+        player.volume = 0
+        let item = AVPlayerItem(url: url)
+        let looper = AVPlayerLooper(player: player, templateItem: item)
+        let layer = AVPlayerLayer(player: player)
+        layer.videoGravity = .resizeAspect
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.layer.addSublayer(layer)
+        context.coordinator.player = player
+        context.coordinator.layer = layer
+        context.coordinator.looper = looper
+        player.play()
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.layer?.frame = uiView.bounds
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.player?.pause()
+        coordinator.player = nil
+        coordinator.looper = nil
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    final class Coordinator {
+        var player: AVQueuePlayer?
+        var layer: AVPlayerLayer?
+        var looper: AVPlayerLooper?
+    }
+}
+
+struct LivePhotoView: View {
+    let imageURL: URL
+    let videoURL: URL?
+    @State private var showingVideo = false
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            if showingVideo, let videoURL {
+                LoopingVideoPlayerView(url: videoURL)
+            } else {
+                LocalImageView(url: imageURL)
+            }
+            if videoURL != nil {
+                Label("LIVE", systemImage: "livephoto")
+                    .font(.caption2.weight(.bold))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(.black.opacity(0.55), in: Capsule())
+                    .foregroundStyle(.white)
+                    .padding(8)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard videoURL != nil else { return }
+            withAnimation(.easeInOut(duration: 0.15)) { showingVideo.toggle() }
+        }
+    }
+}
+
 struct ImageViewerView: View {
     let files: [MediaFile]
+    var livePhotoVideos: [Int: MediaFile] = [:]
     @State private var selection = 0
 
     var body: some View {
         TabView(selection: $selection) {
             ForEach(files) { file in
-                LocalImageView(url: file.fileURL, animated: file.isAnimated)
-                    .tag(file.orderIndex)
+                LivePhotoView(
+                    imageURL: file.fileURL,
+                    videoURL: livePhotoVideos[file.orderIndex]?.fileURL
+                )
+                .tag(file.orderIndex)
             }
         }
         .tabViewStyle(.page)

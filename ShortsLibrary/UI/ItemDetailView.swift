@@ -177,7 +177,12 @@ struct ItemDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if [.image, .imageText, .dynamic].contains(item.kindEnum),
                   !item.imageFiles.filter({ $0.existsOnDisk }).isEmpty {
-            ImageViewerView(files: item.imageFiles.filter { $0.existsOnDisk })
+            ImageViewerView(
+                files: item.imageFiles.filter { $0.existsOnDisk },
+                livePhotoVideos: item.livePhotoVideoFiles
+                    .filter { $0.existsOnDisk }
+                    .reduce(into: [:]) { $0[$1.orderIndex] = $1 }
+            )
                 .frame(height: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let cover = item.coverFile, cover.existsOnDisk {
@@ -222,12 +227,22 @@ struct ItemDetailView: View {
                video.existsOnDisk {
                 try await PhotoSaver.saveVideo(video.fileURL)
             } else {
-                let images = item.imageFiles.filter { $0.existsOnDisk }.map(\.fileURL)
-                if images.isEmpty {
+                var pairs: [(image: URL, video: URL)] = []
+                var plainImages: [URL] = []
+                for file in item.imageFiles.filter({ $0.existsOnDisk }) {
+                    if let video = item.livePhotoVideoFile(orderIndex: file.orderIndex),
+                       video.existsOnDisk {
+                        pairs.append((file.fileURL, video.fileURL))
+                    } else {
+                        plainImages.append(file.fileURL)
+                    }
+                }
+                if pairs.isEmpty && plainImages.isEmpty {
                     toast = "没有可保存的图片或视频"
                     return
                 }
-                try await PhotoSaver.saveImages(images)
+                try await PhotoSaver.saveImages(plainImages)
+                try await PhotoSaver.saveLivePhotos(pairs)
             }
             toast = "已保存到相册"
         } catch {

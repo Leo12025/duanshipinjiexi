@@ -50,6 +50,7 @@ enum LibraryBackup {
                     sourceAudioURLString: item.sourceAudioURLString,
                     sourceCoverURLString: item.sourceCoverURLString,
                     sourceImageURLStrings: item.sourceImageURLStrings,
+                    sourceLivePhotoVideoURLStrings: item.sourceLivePhotoVideoURLStrings,
                     downloadFailed: item.downloadFailed,
                     lastDownloadError: item.lastDownloadError,
                     needsAudioMux: item.needsAudioMux,
@@ -146,6 +147,7 @@ enum LibraryBackup {
             item.sourceAudioURLString = saved.sourceAudioURLString
             item.sourceCoverURLString = saved.sourceCoverURLString
             item.sourceImageURLStrings = saved.sourceImageURLStrings
+            item.sourceLivePhotoVideoURLStrings = saved.sourceLivePhotoVideoURLStrings ?? []
             item.downloadFailed = saved.downloadFailed
             item.lastDownloadError = saved.lastDownloadError
             item.needsAudioMux = saved.needsAudioMux ?? false
@@ -289,6 +291,7 @@ private struct LibraryBackupItem: Codable {
     let sourceAudioURLString: String?
     let sourceCoverURLString: String?
     let sourceImageURLStrings: [String]
+    let sourceLivePhotoVideoURLStrings: [String]?
     let downloadFailed: Bool
     let lastDownloadError: String?
     let needsAudioMux: Bool?
