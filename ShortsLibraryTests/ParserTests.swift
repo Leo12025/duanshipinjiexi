@@ -440,4 +440,29 @@ final class ParserTests: XCTestCase {
         XCTAssertFalse(ImageFileProcessor.convertibleToJPEG(ext: "jpg"))
         XCTAssertFalse(ImageFileProcessor.convertibleToJPEG(ext: "mp4"))
     }
+
+    func testDouyinTitleIgnoresMusicName() {
+        let html = #"""
+        <script>window._ROUTER_DATA = {"aweme_detail":{"aweme_id":"7710910581876000435","desc":"作品标题","nickname":"作者A","music":{"title":"背景音乐名","desc":"音乐介绍","owner":{"nickname":"音乐人B"}}}}</script>
+        """#
+        let metadata = HTMLMetadataExtractor.extract(
+            html: html,
+            finalURL: URL(string: "https://www.douyin.com/video/7710910581876000435")!
+        )
+        XCTAssertNil(metadata.title)
+        XCTAssertEqual(metadata.author, "作者A")
+        let detail = DouyinParser().extractDetail(from: html)
+        XCTAssertEqual(detail.description, "作品标题")
+        XCTAssertEqual(detail.author, "作者A")
+        XCTAssertNil(detail.title)
+    }
+
+    func testPublicJSONTitleFallbackStillWorks() {
+        let html = #"""<script>{"title":"正常标题"}</script>"""#
+        let metadata = HTMLMetadataExtractor.extract(
+            html: html,
+            finalURL: URL(string: "https://example.com/video/1")!
+        )
+        XCTAssertEqual(metadata.title, "正常标题")
+    }
 }

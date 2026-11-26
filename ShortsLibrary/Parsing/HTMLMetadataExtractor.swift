@@ -137,17 +137,45 @@ enum HTMLMetadataExtractor {
 
     private static func applyPublicJSONFallbacks(html: String, to result: inout PageMetadata) {
         if result.title == nil,
-           let raw = firstCapture(pattern: #""(?:title|name)"\s*:\s*"((?:[^"\\]|\\.)*)""#, in: html) {
+           let raw = firstCaptureOutsideAuxiliaryContext(
+            pattern: #""(?:title|name)"\s*:\s*"((?:[^"\\]|\\.)*)""#,
+            in: html
+           ) {
             result.title = decode(raw)
         }
         if result.author == nil,
-           let raw = firstCapture(pattern: #""(?:nickname|nickName|userName|authorName)"\s*:\s*"((?:[^"\\]|\\.)*)""#, in: html) {
+           let raw = firstCaptureOutsideAuxiliaryContext(
+            pattern: #""(?:nickname|nickName|userName|authorName)"\s*:\s*"((?:[^"\\]|\\.)*)""#,
+            in: html
+           ) {
             result.author = decode(raw)
         }
         if result.description == nil,
-           let raw = firstCapture(pattern: #""(?:desc|description|caption)"\s*:\s*"((?:[^"\\]|\\.)*)""#, in: html) {
+           let raw = firstCaptureOutsideAuxiliaryContext(
+            pattern: #""(?:desc|description|caption)"\s*:\s*"((?:[^"\\]|\\.)*)""#,
+            in: html
+           ) {
             result.description = decode(raw)
         }
+    }
+
+    private static func firstCaptureOutsideAuxiliaryContext(pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let ns = text as NSString
+        let range = NSRange(location: 0, length: ns.length)
+        for match in regex.matches(in: text, options: [], range: range) where match.numberOfRanges > 1 {
+            let capture = match.range(at: 1)
+            guard capture.location != NSNotFound else { continue }
+            let start = max(0, match.range(at: 0).location - 200)
+            let preceding = ns.substring(
+                with: NSRange(location: start, length: match.range(at: 0).location - start)
+            ).lowercased()
+            if ["music", "audio", "bgm", "sound"].contains(where: { preceding.contains($0) }) {
+                continue
+            }
+            return ns.substring(with: capture)
+        }
+        return nil
     }
 
     private static func embeddedVideoURLs(in html: String) -> [URL] {

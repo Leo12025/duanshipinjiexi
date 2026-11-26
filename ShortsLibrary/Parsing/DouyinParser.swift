@@ -98,12 +98,13 @@ struct DouyinParser: PlatformParser {
         let kind: MediaKind = isImagePage && !images.isEmpty
             ? (images.count == 1 ? .image : .imageText)
             : MediaKindResolver.resolve(videos: videos.count, images: images.count, audios: 0)
+        let title = detail.description ?? detail.title ?? metadata.title ?? "抖音内容 \(sourceId)"
 
         return ParsedMedia(
             source: .douyin,
             sourceId: sourceId,
             kind: kind,
-            title: metadata.title ?? detail.title ?? "抖音内容 \(sourceId)",
+            title: title,
             author: metadata.author ?? detail.author,
             caption: metadata.description ?? detail.description,
             pageURL: finalURL,
@@ -256,6 +257,10 @@ struct DouyinParser: PlatformParser {
                id != expected {
                 return
             }
+            let contextLower = context.lowercased()
+            let isAuxiliaryContext = ["music", "audio", "bgm", "sound"].contains {
+                contextLower.contains($0)
+            }
             for (key, child) in dictionary {
                 let lower = key.lowercased()
                 if lower.contains("avatar") { continue }
@@ -265,17 +270,20 @@ struct DouyinParser: PlatformParser {
                    lower == "aweme_id", value.count >= 8 {
                     result.sourceID = value
                 }
-                if result.description == nil,
+                if !isAuxiliaryContext,
+                   result.description == nil,
                    let value = child as? String,
                    lower == "desc", !value.isEmpty {
                     result.description = value
                 }
-                if result.author == nil,
+                if !isAuxiliaryContext,
+                   result.author == nil,
                    let value = child as? String,
                    lower == "nickname", !value.isEmpty {
                     result.author = value
                 }
-                if result.title == nil,
+                if !isAuxiliaryContext,
+                   result.title == nil,
                    let value = child as? String,
                    ["title", "item_title"].contains(lower), !value.isEmpty {
                     result.title = value
