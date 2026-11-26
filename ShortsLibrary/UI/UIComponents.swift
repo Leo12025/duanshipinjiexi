@@ -29,6 +29,10 @@ struct ItemCard: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
             }
+            .overlay(alignment: .bottomTrailing) {
+                TypeBadge(item: item)
+                    .padding(8)
+            }
 
             if showsDetails {
                 Text(item.title)
@@ -39,6 +43,11 @@ struct ItemCard: View {
                 HStack(spacing: 6) {
                     PlatformBadge(source: item.sourceEnum)
                     Spacer(minLength: 0)
+                    if item.kindEnum == .video, let duration = item.duration, duration > 0 {
+                        Text(ItemCard.durationText(duration))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -92,10 +101,6 @@ struct ItemCard: View {
                     .padding(8)
             }
 
-        }
-        .overlay(alignment: .bottomTrailing) {
-            TypeBadge(item: item)
-                .padding(8)
         }
     }
 

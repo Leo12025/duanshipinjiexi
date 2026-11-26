@@ -335,7 +335,7 @@ struct LibraryListView: View {
             NavigationLink(value: item) {
                 ItemCard(
                     item: item,
-                    showsDetails: false,
+                    showsDetails: true,
                     fixedSize: size,
                     coverAspectRatio: coverAspectRatio(for: item)
                 )
