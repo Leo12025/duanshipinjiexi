@@ -27,6 +27,14 @@ localization_path = "ShortsLibrary/zh-Hans.lproj"
 privacy_path = "ShortsLibrary/PrivacyInfo.xcprivacy"
 info_path = "ShortsLibrary/Info.plist"
 product_path = "ShortsLibrary.app"
+LIVE_ACTIVITY_DIR_NAME = "ShortsLibraryLiveActivity"
+live_activity_root = ROOT / LIVE_ACTIVITY_DIR_NAME
+live_activity_sources = sorted(
+    str(path.relative_to(ROOT)) for path in live_activity_root.glob("*.swift")
+)
+shared_activity_path = "ShortsLibraryLiveActivity/ShortsActivityAttributes.swift"
+live_activity_info_path = "ShortsLibraryLiveActivity/Info.plist"
+live_activity_product_path = "ShortsLibraryLiveActivity.appex"
 
 objects: dict[str, dict] = {}
 
@@ -126,6 +134,21 @@ xctest_build = ident("build:XCTest.framework")
 app_product_test_build = ident("build:app.product.for.tests")
 target_dependency_id = ident("dependency:tests.to.app")
 container_proxy_id = ident("proxy:tests.to.app")
+live_activity_group = ident("object:group.liveactivity")
+live_activity_target_id = ident("object:target.liveactivity")
+live_activity_product_ref = ident("file:" + live_activity_product_path)
+live_activity_info_ref = ident("file:" + live_activity_info_path)
+live_activity_sources_phase = ident("phase:liveactivity.sources")
+live_activity_frameworks_phase = ident("phase:liveactivity.frameworks")
+live_activity_cfg_list = ident("configlist:liveactivity")
+live_activity_debug = ident("config:liveactivity.debug")
+live_activity_release = ident("config:liveactivity.release")
+live_activity_product_build = ident("build:" + live_activity_product_path)
+embed_phase = ident("phase:app.embed.extensions")
+widget_container_proxy_id = ident("proxy:app.to.liveactivity")
+widget_dependency_id = ident("dependency:app.to.liveactivity")
+shared_activity_ref_id = ident("file:liveactivity.shared.attributes")
+shared_activity_build_id = ident("build:liveactivity.shared.attributes")
 
 SOURCE_DIR_NAME = SOURCE_ROOT.name
 TEST_DIR_NAME = TEST_ROOT.name
@@ -156,7 +179,7 @@ def nested_group(parent_id: str, parts: tuple[str, ...]) -> str:
 add(
     main_group,
     isa="PBXGroup",
-    children=[sources_group, test_group, products_group],
+    children=[sources_group, live_activity_group, test_group, products_group],
     sourceTree="<group>",
 )
 add(
@@ -176,9 +199,17 @@ add(
     sourceTree="<group>",
 )
 add(
+    live_activity_group,
+    isa="PBXGroup",
+    children=[],
+    name=LIVE_ACTIVITY_DIR_NAME,
+    path=LIVE_ACTIVITY_DIR_NAME,
+    sourceTree="<group>",
+)
+add(
     products_group,
     isa="PBXGroup",
-    children=[product_ref, test_product_ref],
+    children=[product_ref, live_activity_product_ref, test_product_ref],
     name="Products",
     sourceTree="<group>",
 )
@@ -218,6 +249,47 @@ for rel in test_swift_files:
     test_source_ids.append(build)
     parent = nested_group(test_group, rel_path.parent.parts)
     objects[parent]["children"].append(ref)
+
+live_activity_source_ids = []
+for rel in live_activity_sources:
+    if rel == shared_activity_path:
+        live_activity_source_ids.append(shared_activity_build_id)
+        objects[live_activity_group]["children"].append(shared_activity_ref_id)
+        continue
+    ref = ident("file:" + rel)
+    build = ident("build:" + rel)
+    add(
+        ref,
+        isa="PBXFileReference",
+        lastKnownFileType="sourcecode.swift",
+        path=Path(rel).name,
+        sourceTree="<group>",
+    )
+    add(build, isa="PBXBuildFile", fileRef=ref)
+    live_activity_source_ids.append(build)
+    objects[live_activity_group]["children"].append(ref)
+
+add(
+    shared_activity_ref_id,
+    isa="PBXFileReference",
+    lastKnownFileType="sourcecode.swift",
+    path=Path(shared_activity_path).name,
+    sourceTree="<group>",
+)
+add(shared_activity_build_id, isa="PBXBuildFile", fileRef=shared_activity_ref_id)
+source_ids.append(shared_activity_build_id)
+if shared_activity_path not in live_activity_sources:
+    live_activity_source_ids.append(shared_activity_build_id)
+    objects[live_activity_group]["children"].append(shared_activity_ref_id)
+
+add(
+    live_activity_info_ref,
+    isa="PBXFileReference",
+    lastKnownFileType="text.plist.xml",
+    path=Path(live_activity_info_path).name,
+    sourceTree="<group>",
+)
+objects[live_activity_group]["children"].append(live_activity_info_ref)
 
 asset_ref = ident("file:" + asset_path)
 asset_build = ident("build:" + asset_path)
@@ -286,6 +358,15 @@ add(
     sourceTree="BUILT_PRODUCTS_DIR",
 )
 add(
+    live_activity_product_ref,
+    isa="PBXFileReference",
+    explicitFileType="wrapper.app-extension",
+    includeInIndex="0",
+    path=live_activity_product_path,
+    sourceTree="BUILT_PRODUCTS_DIR",
+)
+add(live_activity_product_build, isa="PBXBuildFile", fileRef=live_activity_product_ref)
+add(
     xctest_ref,
     isa="PBXFileReference",
     lastKnownFileType="wrapper.framework",
@@ -317,6 +398,30 @@ add(
     files=resource_ids,
     runOnlyForDeploymentPostprocessing="0",
 )
+add(
+    live_activity_sources_phase,
+    isa="PBXSourcesBuildPhase",
+    buildActionMask="2147483647",
+    files=live_activity_source_ids,
+    runOnlyForDeploymentPostprocessing="0",
+)
+add(
+    live_activity_frameworks_phase,
+    isa="PBXFrameworksBuildPhase",
+    buildActionMask="2147483647",
+    files=[],
+    runOnlyForDeploymentPostprocessing="0",
+)
+add(
+    embed_phase,
+    isa="PBXCopyFilesBuildPhase",
+    buildActionMask="2147483647",
+    dstPath="",
+    dstSubfolderSpec="13",
+    files=[live_activity_product_build],
+    name="Embed App Extensions",
+    runOnlyForDeploymentPostprocessing="0",
+)
 
 add(
     test_sources_phase,
@@ -341,6 +446,20 @@ add(
     remoteInfo="ShortsLibrary",
 )
 add(
+    widget_container_proxy_id,
+    isa="PBXContainerItemProxy",
+    containerPortal=project_id,
+    proxyType=1,
+    remoteGlobalIDString=live_activity_target_id,
+    remoteInfo="ShortsLibraryLiveActivity",
+)
+add(
+    widget_dependency_id,
+    isa="PBXTargetDependency",
+    target=live_activity_target_id,
+    targetProxy=widget_container_proxy_id,
+)
+add(
     target_dependency_id,
     isa="PBXTargetDependency",
     target=target_id,
@@ -351,9 +470,9 @@ add(
     target_id,
     isa="PBXNativeTarget",
     buildConfigurationList=target_cfg_list,
-    buildPhases=[sources_phase, frameworks_phase, resources_phase],
+    buildPhases=[sources_phase, frameworks_phase, resources_phase, embed_phase],
     buildRules=[],
-    dependencies=[],
+    dependencies=[widget_dependency_id],
     name="ShortsLibrary",
     productName="ShortsLibrary",
     productReference=product_ref,
@@ -371,6 +490,19 @@ add(
     productName="ShortsLibraryTests",
     productReference=test_product_ref,
     productType="com.apple.product-type.bundle.unit-test",
+)
+
+add(
+    live_activity_target_id,
+    isa="PBXNativeTarget",
+    buildConfigurationList=live_activity_cfg_list,
+    buildPhases=[live_activity_sources_phase, live_activity_frameworks_phase],
+    buildRules=[],
+    dependencies=[],
+    name="ShortsLibraryLiveActivity",
+    productName="ShortsLibraryLiveActivity",
+    productReference=live_activity_product_ref,
+    productType="com.apple.product-type.app-extension",
 )
 
 common_settings = {
@@ -449,6 +581,26 @@ for config_name, settings in [
 ]:
     apply_preserved("ShortsLibraryTests", config_name, settings, existing_settings)
 
+parent_bundle_id = (
+    existing_settings.get(("ShortsLibrary", "Release"), {}).get("PRODUCT_BUNDLE_IDENTIFIER")
+    or existing_settings.get(("ShortsLibrary", "Debug"), {}).get("PRODUCT_BUNDLE_IDENTIFIER")
+    or "com.leo.shortslibrary"
+)
+widget_overrides = {
+    "GENERATE_INFOPLIST_FILE": "NO",
+    "INFOPLIST_FILE": live_activity_info_path,
+    "PRODUCT_BUNDLE_IDENTIFIER": parent_bundle_id + ".liveactivity",
+    "PRODUCT_NAME": "$(TARGET_NAME)",
+    "ASSETCATALOG_COMPILER_APPICON_NAME": "",
+    "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "",
+}
+widget_debug_settings = dict(debug_settings)
+apply_preserved("ShortsLibrary", "Debug", widget_debug_settings, existing_settings)
+widget_debug_settings.update(widget_overrides)
+widget_release_settings = dict(release_settings)
+apply_preserved("ShortsLibrary", "Release", widget_release_settings, existing_settings)
+widget_release_settings.update(widget_overrides)
+
 for config_id, name, settings in [
     (project_debug, "Debug", debug_settings),
     (project_release, "Release", release_settings),
@@ -456,6 +608,8 @@ for config_id, name, settings in [
     (target_release, "Release", release_settings),
     (test_debug, "Debug", test_debug_settings),
     (test_release, "Release", test_release_settings),
+    (live_activity_debug, "Debug", widget_debug_settings),
+    (live_activity_release, "Release", widget_release_settings),
 ]:
     add(config_id, isa="XCBuildConfiguration", buildSettings=settings, name=name)
 
@@ -483,6 +637,14 @@ add(
 )
 
 add(
+    live_activity_cfg_list,
+    isa="XCConfigurationList",
+    buildConfigurations=[live_activity_debug, live_activity_release],
+    defaultConfigurationIsVisible="0",
+    defaultConfigurationName="Release",
+)
+
+add(
     project_id,
     isa="PBXProject",
     attributes={
@@ -490,6 +652,10 @@ add(
         "LastUpgradeCheck": "2700",
         "TargetAttributes": {
             target_id: {
+                "CreatedOnToolsVersion": "27.2",
+                "ProvisioningStyle": "Automatic",
+            },
+            live_activity_target_id: {
                 "CreatedOnToolsVersion": "27.2",
                 "ProvisioningStyle": "Automatic",
             }
@@ -504,7 +670,7 @@ add(
     productRefGroup=products_group,
     projectDirPath="",
     projectRoot="",
-    targets=[target_id, test_target_id],
+    targets=[target_id, live_activity_target_id, test_target_id],
 )
 
 project = {

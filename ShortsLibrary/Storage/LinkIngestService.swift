@@ -51,7 +51,23 @@ enum LinkIngestService {
             return try await task.value
         }
         let task = Task {
-            try await ingestUncached(url: url, modelContext: modelContext)
+            await LiveActivityManager.shared.startParsing(host: url.host())
+            do {
+                let outcome = try await ingestUncached(url: url, modelContext: modelContext)
+                await LiveActivityManager.shared.finishParsing(
+                    success: true,
+                    title: outcome.item.title,
+                    message: nil
+                )
+                return outcome
+            } catch {
+                await LiveActivityManager.shared.finishParsing(
+                    success: false,
+                    title: nil,
+                    message: error.localizedDescription
+                )
+                throw error
+            }
         }
         inFlight[key] = task
         defer { inFlight[key] = nil }

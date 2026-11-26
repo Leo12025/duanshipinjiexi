@@ -95,6 +95,7 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
         )
         tasks.append(task)
         settingsChanged()
+        syncActivity()
         return task.id
     }
 
@@ -104,6 +105,7 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
 
     func clearCompleted() {
         tasks.removeAll { $0.status == .done || $0.status == .failed }
+        syncActivity()
     }
 
     func cancel(id: UUID) {
@@ -118,6 +120,7 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
             tasks[index].error = "已取消"
         }
         task.onError?("已取消")
+        syncActivity()
     }
 
     func pause(id: UUID) {
@@ -129,6 +132,7 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
         }
         tasks[index].generation += 1
         tasks[index].status = .paused
+        syncActivity()
     }
 
     func resume(id: UUID) {
@@ -138,6 +142,7 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
         tasks[index].status = .pending
         tasks[index].error = nil
         settingsChanged()
+        syncActivity()
     }
 
     private var canStart: Bool {
@@ -230,6 +235,7 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
         guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
         tasks[index].status = status
         if status == .done { tasks[index].progress = 1 }
+        syncActivity()
     }
 
     private static func taskKey(url: URL, destination: URL) -> String {
@@ -239,5 +245,11 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
     private func updateProgress(id: UUID, value: Double) {
         guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
         tasks[index].progress = value
+        syncActivity()
+    }
+
+    private func syncActivity() {
+        let snapshot = tasks
+        Task { await LiveActivityManager.shared.updateDownloads(snapshot) }
     }
 }

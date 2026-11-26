@@ -465,4 +465,21 @@ final class ParserTests: XCTestCase {
         )
         XCTAssertEqual(metadata.title, "正常标题")
     }
+
+    func testLiveActivityProgress() {
+        let url = URL(string: "https://example.com/video.mp4")!
+        let destination = URL(fileURLWithPath: "/tmp/video.mp4")
+        var first = DownloadQueueTask(url: url, destination: destination, label: "视频 1")
+        var second = DownloadQueueTask(
+            url: url,
+            destination: destination.appendingPathExtension("2"),
+            label: "视频 2"
+        )
+        first.status = .done
+        first.progress = 1
+        second.status = .running
+        second.progress = 0.5
+        XCTAssertEqual(LiveActivityProgress.value(for: [first, second]), 0.75)
+        XCTAssertEqual(LiveActivityProgress.value(for: []), 0)
+    }
 }
