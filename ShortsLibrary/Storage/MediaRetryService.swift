@@ -4,6 +4,8 @@ import UIKit
 
 @MainActor
 enum MediaRetryService {
+    private static var muxInFlight: Set<PersistentIdentifier> = []
+
     static func enqueueRetry(item: LibraryItem, in context: ModelContext) {
         item.downloadFailed = false
         item.lastDownloadError = nil
@@ -42,7 +44,9 @@ enum MediaRetryService {
         if item.kindEnum == .video,
            item.needsAudioMux,
            let existingVideo = item.videoFile,
-           existingVideo.existsOnDisk {
+           existingVideo.existsOnDisk,
+           !muxInFlight.contains(item.id) {
+            muxInFlight.insert(item.id)
             Task {
                 await Self.muxExistingVideo(
                     item: item,
@@ -50,6 +54,7 @@ enum MediaRetryService {
                     context: context,
                     markFailure: markFailure
                 )
+                muxInFlight.remove(item.id)
             }
         }
 

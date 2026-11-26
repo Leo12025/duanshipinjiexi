@@ -10,8 +10,14 @@ final class FollowPageCollector: NSObject, WKNavigationDelegate {
     private var collected: [FollowedAccountDraft] = []
     private var scrollCount = 0
     private var timeoutWorkItem: DispatchWorkItem?
+    private var isCollecting = false
 
     func collect(platform: MediaSource) async throws -> [FollowedAccountDraft] {
+        guard !isCollecting else {
+            throw AppError.parsingFailed("正在同步关注列表，请稍后再试")
+        }
+        isCollecting = true
+
         let url: URL
         switch platform {
         case .douyin:
@@ -97,6 +103,7 @@ final class FollowPageCollector: NSObject, WKNavigationDelegate {
     private func finish(with result: Result<[FollowedAccountDraft], Error>) {
         guard let continuation else { return }
         self.continuation = nil
+        self.isCollecting = false
         timeoutWorkItem?.cancel()
         timeoutWorkItem = nil
         webView?.navigationDelegate = nil

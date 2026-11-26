@@ -320,7 +320,8 @@ struct ItemDetailView: View {
 
     private func reparse(pageURL: URL) async {
         do {
-            ParseCache.clear()
+            let loggedIn = await LoginSessionManager.shared.isLoggedIn(for: pageURL)
+            ParseCache.clear(for: pageURL, loggedIn: loggedIn)
             try await LinkIngestService.ingest(url: pageURL, modelContext: modelContext)
             toast = "已重新解析，正在修复音轨"
         } catch {

@@ -8,11 +8,16 @@ private enum PlayerAudioSession {
         Task.detached(priority: .utility) {
             let session = AVAudioSession.sharedInstance()
             try? session.setCategory(.playback, mode: mode, options: [.duckOthers])
-            if #available(iOS 27.0, *) {
-                session.activate(options: []) { _, _ in }
-            } else {
-                try? session.setActive(true, options: .notifyOthersOnDeactivation)
-            }
+            try? session.setActive(true, options: .notifyOthersOnDeactivation)
+        }
+    }
+
+    static func deactivate() {
+        Task.detached(priority: .utility) {
+            try? AVAudioSession.sharedInstance().setActive(
+                false,
+                options: .notifyOthersOnDeactivation
+            )
         }
     }
 }
@@ -173,35 +178,7 @@ struct ZoomableMediaView: View {
                 LoopingVideoPlayerView(url: videoURL)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let image = UIImage(contentsOfFile: imageURL.path) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .scaleEffect(scale)
-                    .offset(offset)
-                    .gesture(
-                        MagnificationGesture()
-                            .onChanged { value in
-                                scale = min(max(accumulatedScale * value, 1), 6)
-                            }
-                            .onEnded { _ in
-                                accumulatedScale = scale
-                                if scale <= 1 { resetOffset() }
-                            }
-                    )
-                    .simultaneousGesture(
-                        DragGesture()
-                            .onChanged { value in
-                                guard scale > 1 else { return }
-                                offset = CGSize(
-                                    width: accumulatedOffset.width + value.translation.width,
-                                    height: accumulatedOffset.height + value.translation.height
-                                )
-                            }
-                            .onEnded { _ in accumulatedOffset = offset }
-                    )
-                    .onTapGesture(count: 2) {
-                        if scale > 1 { resetZoom() } else { scale = 2.5; accumulatedScale = scale }
-                    }
+                zoomableImage(image)
             } else {
                 Image(systemName: "photo")
                     .font(.largeTitle)
@@ -224,6 +201,44 @@ struct ZoomableMediaView: View {
             }
         }
         .clipped()
+    }
+
+    @ViewBuilder
+    private func zoomableImage(_ image: UIImage) -> some View {
+        let base = Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .scaleEffect(scale)
+            .offset(offset)
+            .gesture(
+                MagnificationGesture()
+                    .onChanged { value in
+                        scale = min(max(accumulatedScale * value, 1), 6)
+                    }
+                    .onEnded { _ in
+                        accumulatedScale = scale
+                        if scale <= 1 { resetOffset() }
+                    }
+            )
+            .onTapGesture(count: 2) {
+                if scale > 1 { resetZoom() } else { scale = 2.5; accumulatedScale = scale }
+            }
+
+        let drag = DragGesture()
+            .onChanged { value in
+                guard scale > 1 else { return }
+                offset = CGSize(
+                    width: accumulatedOffset.width + value.translation.width,
+                    height: accumulatedOffset.height + value.translation.height
+                )
+            }
+            .onEnded { _ in accumulatedOffset = offset }
+
+        if scale > 1 {
+            base.highPriorityGesture(drag)
+        } else {
+            base
+        }
     }
 
     private func resetZoom() {
@@ -346,6 +361,14 @@ struct VideoPlayerView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
+
+    static func dismantleUIViewController(
+        _ uiViewController: AVPlayerViewController,
+        coordinator: ()
+    ) {
+        uiViewController.player?.pause()
+        PlayerAudioSession.deactivate()
+    }
 }
 
 struct AudioPlayerView: UIViewControllerRepresentable {
@@ -363,4 +386,12 @@ struct AudioPlayerView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
+
+    static func dismantleUIViewController(
+        _ uiViewController: AVPlayerViewController,
+        coordinator: ()
+    ) {
+        uiViewController.player?.pause()
+        PlayerAudioSession.deactivate()
+    }
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -231,18 +232,27 @@ add(asset_build, isa="PBXBuildFile", fileRef=asset_ref)
 resource_ids.append(asset_build)
 objects[sources_group]["children"].append(asset_ref)
 
-localization_ref = ident("file:" + localization_path)
-localization_build = ident("build:" + localization_path)
+localization_group = ident("variant:Localizable.strings")
+localization_ref = ident("file:" + localization_path + "/Localizable.strings")
+localization_build = ident("build:" + localization_path + "/Localizable.strings")
+add(
+    localization_group,
+    isa="PBXVariantGroup",
+    name="Localizable.strings",
+    sourceTree="<group>",
+    children=[localization_ref],
+)
 add(
     localization_ref,
     isa="PBXFileReference",
-    lastKnownFileType="folder",
-    path=Path(localization_path).name,
+    lastKnownFileType="text.plist.strings",
+    name="zh-Hans",
+    path=str(Path(localization_path) / "Localizable.strings"),
     sourceTree="<group>",
 )
-add(localization_build, isa="PBXBuildFile", fileRef=localization_ref)
+add(localization_build, isa="PBXBuildFile", fileRef=localization_group)
 resource_ids.append(localization_build)
-objects[sources_group]["children"].append(localization_ref)
+objects[sources_group]["children"].append(localization_group)
 
 privacy_ref = ident("file:" + privacy_path)
 privacy_build = ident("build:" + privacy_path)
@@ -514,10 +524,33 @@ project = {
     "rootObject": project_id,
 }
 
+def pbxproj_quote(value):
+    if re.fullmatch(r"[A-Za-z0-9_./$(){}@-]+", value):
+        return value
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def pbxproj_serialize(value, indent=0):
+    pad = "\t" * indent
+    if isinstance(value, dict):
+        lines = ["{"]
+        for key, val in value.items():
+            lines.append(f"{pad}\t{pbxproj_quote(key)} = {pbxproj_serialize(val, indent + 1)};")
+        lines.append(f"{pad}}}")
+        return "\n".join(lines)
+    if isinstance(value, list):
+        lines = ["("]
+        for val in value:
+            lines.append(f"{pad}\t{pbxproj_serialize(val, indent + 1)},")
+        lines.append(f"{pad})")
+        return "\n".join(lines)
+    return pbxproj_quote(str(value))
+
+
 PROJECT_DIR.mkdir(parents=True, exist_ok=True)
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 (PROJECT_DIR / "project.pbxproj").write_text(
-    json.dumps(project, indent=2, ensure_ascii=False) + "\n",
+    "// !$*UTF8*$!\n" + pbxproj_serialize(project) + "\n",
     encoding="utf-8",
 )
 (WORKSPACE_DIR / "contents.xcworkspacedata").write_text(

@@ -2,8 +2,7 @@ import Foundation
 
 enum PublicPageLoader {
     private static let loginKeywords = [
-        "请先登录", "登录后查看", "登录后可见", "请登录后", "登录以查看",
-        "log in", "sign in", "验证码", "需要登录"
+        "请先登录", "登录后查看", "登录后可见", "请登录后", "登录以查看", "需要登录"
     ]
     private static let rateLimitKeywords = [
         "访问频繁", "操作频繁", "请求过于频繁", "too many requests", "rate limit"

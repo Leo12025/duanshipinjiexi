@@ -25,15 +25,17 @@ struct DouyinParser: PlatformParser {
         }
         let (html, finalURL) = loaded
         let metadata = HTMLMetadataExtractor.extract(html: html, finalURL: finalURL)
-        let detail = extractDetail(from: html)
+        let pageSourceID = extractSourceID(from: finalURL, html: html)
+        let detail = extractDetail(from: html, matching: pageSourceID)
 
-        let sourceId = extractSourceID(from: finalURL, html: html) ?? detail.sourceID
+        let sourceId = pageSourceID ?? detail.sourceID
             ?? "\(finalURL.lastPathComponent)"
         guard !sourceId.isEmpty else {
             throw AppError.parsingFailed("无法提取抖音视频 ID")
         }
 
         let isVideoPage = Self.isVideoPage(finalURL)
+        let isImagePage = Self.isImagePage(finalURL)
         let audioURL = detail.audioURL ?? metadata.audioURLs.first
 
         var imageURLs = isVideoPage ? detail.images : metadata.imageURLs + detail.images
@@ -91,10 +93,14 @@ struct DouyinParser: PlatformParser {
             throw AppError.noMedia
         }
 
+        let kind: MediaKind = isImagePage && !images.isEmpty
+            ? (images.count == 1 ? .image : .imageText)
+            : MediaKindResolver.resolve(videos: videos.count, images: images.count, audios: 0)
+
         return ParsedMedia(
             source: .douyin,
             sourceId: sourceId,
-            kind: MediaKindResolver.resolve(videos: videos.count, images: images.count, audios: 0),
+            kind: kind,
             title: metadata.title ?? detail.title ?? "抖音内容 \(sourceId)",
             author: metadata.author ?? detail.author,
             caption: metadata.description ?? detail.description,
@@ -103,7 +109,7 @@ struct DouyinParser: PlatformParser {
             images: images,
             videos: videos,
             audioURL: audioURL,
-            needsAudioMux: audioURL != nil
+            needsAudioMux: kind == .video && audioURL != nil
         )
     }
 
@@ -133,6 +139,12 @@ struct DouyinParser: PlatformParser {
         return path.contains("/video/") || path.hasSuffix("/video")
     }
 
+    private static func isImagePage(_ url: URL) -> Bool {
+        let path = url.path.lowercased()
+        return path.contains("/note/") || path.contains("/slides/")
+            || path.hasSuffix("/note") || path.hasSuffix("/slides")
+    }
+
     struct DouyinDetail {
         var sourceID: String?
         var title: String?
@@ -144,7 +156,7 @@ struct DouyinParser: PlatformParser {
         var playURI: String?
     }
 
-    func extractDetail(from html: String) -> DouyinDetail {
+    func extractDetail(from html: String, matching sourceID: String? = nil) -> DouyinDetail {
         var result = DouyinDetail()
         var texts = [html]
 
@@ -158,7 +170,7 @@ struct DouyinParser: PlatformParser {
 
         for text in texts {
             for object in jsonObjects(in: text) {
-                collect(from: object, into: &result)
+                collect(from: object, into: &result, matching: sourceID)
             }
         }
 
@@ -228,8 +240,20 @@ struct DouyinParser: PlatformParser {
         return object
     }
 
-    private func collect(from value: Any, into result: inout DouyinDetail, context: String = "") {
+    private func collect(
+        from value: Any,
+        into result: inout DouyinDetail,
+        context: String = "",
+        matching sourceID: String? = nil
+    ) {
         if let dictionary = value as? [String: Any] {
+            if let expected = sourceID,
+               let raw = dictionary["aweme_id"],
+               let id = (raw as? String) ?? (raw as? NSNumber)?.stringValue,
+               id.count >= 8,
+               id != expected {
+                return
+            }
             for (key, child) in dictionary {
                 let lower = key.lowercased()
                 if lower.contains("avatar") { continue }
@@ -283,7 +307,7 @@ struct DouyinParser: PlatformParser {
                           ["url", "display_url", "origin_url", "download_url", "play_url", "video_url", "source_url", "src", "uri", "audio_url", "music_url", "bgm_url"].contains(lower) {
                     add(string, context: nextContext, to: &result)
                 } else {
-                    collect(from: child, into: &result, context: nextContext)
+                    collect(from: child, into: &result, context: nextContext, matching: sourceID)
                 }
             }
             return
@@ -291,7 +315,7 @@ struct DouyinParser: PlatformParser {
 
         if let array = value as? [Any] {
             for child in array {
-                collect(from: child, into: &result, context: context)
+                collect(from: child, into: &result, context: context, matching: sourceID)
             }
         }
     }

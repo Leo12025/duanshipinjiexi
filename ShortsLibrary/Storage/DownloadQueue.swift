@@ -16,8 +16,8 @@ struct DownloadQueueTask: Identifiable {
     let url: URL
     let destination: URL
     let label: String
-    let onFinish: (@MainActor (URL) async -> Void)?
-    let onError: (@MainActor (String) -> Void)?
+    var onFinish: (@MainActor (URL) async -> Void)?
+    var onError: (@MainActor (String) -> Void)?
     var progress: Double = 0
     var status: QueueTaskStatus = .pending
     var generation: Int = 0
@@ -65,11 +65,25 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
         onError: (@MainActor (String) -> Void)? = nil
     ) -> UUID {
         let key = Self.taskKey(url: url, destination: destination)
-        if let existing = tasks.first(where: {
+        if let index = tasks.firstIndex(where: {
             Self.taskKey(url: $0.url, destination: $0.destination) == key
                 && ($0.status == .pending || $0.status == .running)
         }) {
-            return existing.id
+            if let onFinish {
+                let previous = tasks[index].onFinish
+                tasks[index].onFinish = { url in
+                    await previous?(url)
+                    await onFinish(url)
+                }
+            }
+            if let onError {
+                let previous = tasks[index].onError
+                tasks[index].onError = { message in
+                    previous?(message)
+                    onError(message)
+                }
+            }
+            return tasks[index].id
         }
 
         let task = DownloadQueueTask(
@@ -194,7 +208,6 @@ final class DownloadQueue: ObservableObject, @unchecked Sendable {
                   current.generation == generation,
                   current.status == .running,
                   !cancelledIDs.contains(id) else {
-                try? FileManager.default.removeItem(at: task.destination)
                 try? FileManager.default.removeItem(at: task.destination.appendingPathExtension("part"))
                 return
             }

@@ -18,10 +18,7 @@ enum ParseCache {
         lock.lock()
         defer { lock.unlock() }
         guard let entry = storage[key] else { return nil }
-        guard entry.age < successTTL, let parsed = entry.parsed else {
-            storage[key] = nil
-            return nil
-        }
+        guard entry.age < successTTL, let parsed = entry.parsed else { return nil }
         return parsed
     }
 
@@ -54,6 +51,13 @@ enum ParseCache {
     static func clear() {
         lock.lock()
         storage.removeAll()
+        lock.unlock()
+    }
+
+    static func clear(for url: URL, loggedIn: Bool) {
+        let key = cacheKey(url: url, loggedIn: loggedIn)
+        lock.lock()
+        storage[key] = nil
         lock.unlock()
     }
 

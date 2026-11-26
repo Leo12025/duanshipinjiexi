@@ -75,9 +75,6 @@ enum LinkIngestService {
                 ParseCache.store(parsed, for: url, loggedIn: loggedIn)
             } catch {
                 ParseCache.markFailure(for: url, loggedIn: loggedIn)
-                if case AppError.noMedia = error {
-                    throw AppError.platformChanged(parser.source.displayName)
-                }
                 throw error
             }
         }
@@ -108,6 +105,7 @@ enum LinkIngestService {
         item.duration = nil
         item.resolution = nil
         item.byteSize = nil
+        item.needsAudioMux = item.sourceAudioURLString != nil
         try? modelContext.save()
         MediaRetryService.enqueueRetry(item: item, in: modelContext)
     }

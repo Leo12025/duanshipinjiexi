@@ -10,10 +10,15 @@ enum LinkExtractor {
         }
 
         guard !trimmed.contains(where: { $0.isWhitespace || $0.isNewline }) else { return nil }
-        guard let direct = URL(string: trimmed),
-              ["http", "https"].contains(direct.scheme?.lowercased() ?? ""),
-              direct.host() != nil else { return nil }
-        return direct
+
+        let candidates = [trimmed, "https://" + trimmed]
+        for candidate in candidates {
+            guard let url = URL(string: candidate),
+                  ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+                  let host = url.host(), host.contains(".") else { continue }
+            return url
+        }
+        return nil
     }
 
     private static func firstDetectedURL(in text: String) -> URL? {

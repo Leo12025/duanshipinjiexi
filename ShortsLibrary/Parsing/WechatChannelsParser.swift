@@ -63,7 +63,7 @@ struct WechatChannelsParser: PlatformParser {
             #"/sph/([A-Za-z0-9_-]+)"#,
             #"/finder-preview/([A-Za-z0-9_-]+)"#,
             #"/post/([A-Za-z0-9_-]+)"#,
-            #"(?:object_id|objectId|objectNonceId)[\\":=]+([A-Za-z0-9_-]{8,})"#
+            #"(?:object_id|objectId|objectNonceId)[\\":=\\s]+([A-Za-z0-9_-]{8,})"#
         ]
         for pattern in patterns {
             if let value = firstCapture(pattern: pattern, in: html) {

@@ -276,10 +276,12 @@ private final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegat
 
         do {
             try FileManager.default.copyItem(at: location, to: stable)
+            var resultURL = stable
             if (200...299).contains(response.statusCode), response.statusCode != 416 {
                 try finalize(temporary: stable, response: response, state: state)
+                resultURL = state.destination
             }
-            finish(task: downloadTask, with: .success((stable, response)))
+            finish(task: downloadTask, with: .success((resultURL, response)))
         } catch {
             finish(task: downloadTask, with: .failure(error))
         }

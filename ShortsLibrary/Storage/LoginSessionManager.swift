@@ -153,7 +153,8 @@ final class LoginSessionManager: ObservableObject {
                 || host.hasSuffix(".\(item.cookieDomain)")
                 || item.extraHosts.contains(host)
         }
-        let allowedKeywords = platform?.sessionCookieKeywords ?? []
+        guard let platform else { return nil }
+        let allowedKeywords = platform.sessionCookieKeywords
         let matched = cookies.filter { cookie in
             if let expires = cookie.expiresDate, expires < now { return false }
             let domain = cookie.domain

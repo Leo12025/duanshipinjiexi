@@ -94,6 +94,39 @@ enum ImageFileProcessor {
         return results
     }
 
+    static func convertibleToJPEG(ext: String) -> Bool {
+        ["webp", "apng", "tiff", "tif", "bmp"].contains(ext.lowercased())
+    }
+
+    static func convertToJPEG(at url: URL) -> URL? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("ShortsLibraryPhotos", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let destination = directory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("jpg")
+        guard let data = JPEGData(from: image),
+              (try? data.write(to: destination, options: .atomic)) != nil else { return nil }
+        return destination
+    }
+
+    private static func JPEGData(from image: CGImage) -> Data? {
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            data as CFMutableData,
+            UTType.jpeg.identifier as CFString,
+            1,
+            nil
+        ) else { return nil }
+        CGImageDestinationAddImage(destination, image, [
+            kCGImageDestinationLossyCompressionQuality as CFString: 0.92
+        ] as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else { return nil }
+        return data as Data
+    }
+
     static func animatedImage(at url: URL) -> UIImage? {
         guard let data = try? Data(contentsOf: url),
               let source = CGImageSourceCreateWithData(data as CFData, nil) else {

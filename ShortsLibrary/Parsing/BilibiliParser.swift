@@ -55,7 +55,9 @@ struct BilibiliParser: PlatformParser {
     private func extractSourceID(from url: URL, html: String) -> String? {
         let components = url.pathComponents.filter { $0 != "/" }
         if let id = components.first(where: { component in
-            component.hasPrefix("BV") || component.hasPrefix("av") || component.hasPrefix("au")
+            component.hasPrefix("BV")
+                || (component.hasPrefix("av") && component.dropFirst(2).allSatisfy(\.isNumber))
+                || (component.hasPrefix("au") && component.dropFirst(2).allSatisfy(\.isNumber))
         }) {
             return id
         }

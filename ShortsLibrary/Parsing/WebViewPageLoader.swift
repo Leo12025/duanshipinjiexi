@@ -19,6 +19,8 @@ final class WebViewPageLoader: NSObject, WKNavigationDelegate {
     private var webView: WKWebView?
     private var originalURL: URL?
     private var timeoutWorkItem: DispatchWorkItem?
+    private var accumulatedCaptured: [String] = []
+    private var didFinishNavigation = false
 
     private override init() {}
 
@@ -82,7 +84,14 @@ final class WebViewPageLoader: NSObject, WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+        guard !didFinishNavigation else { return }
+        didFinishNavigation = true
+        collect(webView: webView, attempt: 0)
+    }
+
+    private func collect(webView: WKWebView, attempt: Int) {
+        let delays = [1.2, 1.0, 0.8]
+        DispatchQueue.main.asyncAfter(deadline: .now() + delays[min(attempt, delays.count - 1)]) { [weak self] in
             let script = """
             (() => ({
               html: document.documentElement.outerHTML,
@@ -97,17 +106,27 @@ final class WebViewPageLoader: NSObject, WKNavigationDelegate {
                         self.finish(with: .failure(error))
                         return
                     }
-                    guard let dict = result as? [String: Any],
-                          let finalURL = URL(string: dict["url"] as? String ?? "")
+                    guard let dict = result as? [String: Any] else {
+                        self.finish(with: .failure(AppError.parsingFailed("无法读取页面内容")))
+                        return
+                    }
+                    self.accumulatedCaptured.append(contentsOf: (dict["captured"] as? [String]) ?? [])
+                    self.accumulatedCaptured = Array(Set(self.accumulatedCaptured))
+
+                    let attemptCount = 3
+                    guard attempt + 1 >= attemptCount else {
+                        self.collect(webView: webView, attempt: attempt + 1)
+                        return
+                    }
+                    guard let finalURL = URL(string: dict["url"] as? String ?? "")
                             ?? webView.url ?? self.originalURL else {
                         self.finish(with: .failure(AppError.parsingFailed("无法获取页面地址")))
                         return
                     }
-                    let captured = (dict["captured"] as? [String]) ?? []
                     self.finish(with: .success((
                         html: dict["html"] as? String ?? "",
                         url: finalURL,
-                        capturedJSON: captured
+                        capturedJSON: self.accumulatedCaptured
                     )))
                 }
             }

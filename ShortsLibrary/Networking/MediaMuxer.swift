@@ -64,7 +64,7 @@ enum MediaMuxer {
                 case .cancelled:
                     continuation.resume(throwing: AppError.parsingFailed("音视频合成已取消"))
                 default:
-                    break
+                    continuation.resume(throwing: AppError.parsingFailed("音视频合成未完成"))
                 }
             }
         }

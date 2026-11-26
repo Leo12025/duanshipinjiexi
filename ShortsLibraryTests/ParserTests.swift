@@ -12,6 +12,21 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(platform, "抖音")
     }
 
+    func testSchemeLessShortLinkExtraction() {
+        XCTAssertEqual(
+            LinkExtractor.firstURL(in: "v.douyin.com/abc12345")?.absoluteString,
+            "https://v.douyin.com/abc12345"
+        )
+    }
+
+    func testParseCacheFailureShortCircuit() {
+        let url = URL(string: "https://www.douyin.com/video/testfailure")!
+        ParseCache.clear()
+        ParseCache.markFailure(for: url, loggedIn: false)
+        XCTAssertNil(ParseCache.parsed(for: url, loggedIn: false))
+        XCTAssertTrue(ParseCache.hasRecentFailure(for: url, loggedIn: false))
+    }
+
     func testKuaishouShareTextExtraction() {
         let text = #"""
         https://v.kuaishou.com/KLn1EMbt 普通的一天里，也藏着不动声色的喜欢"少年感 "阳光帅气 "记录美好时光 该作品在快手被播放过2.3万次，点击链接，打开【快手】直接观看！
@@ -320,5 +335,45 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(MediaKindResolver.resolve(videos: 0, images: 3, audios: 0), .imageText)
         XCTAssertEqual(MediaKindResolver.resolve(videos: 0, images: 0, audios: 1), .audio)
         XCTAssertEqual(MediaKindResolver.resolve(videos: 0, images: 2, audios: 0, isDynamic: true), .dynamic)
+    }
+
+    func testDouyinShareTextShortLinkExtraction() {
+        let text = "7.15 复制打开抖音，看看【Eviig的图文作品】我真的特别爱你# 洗澡姿势大赏 # # 正向健身引... https://v.douyin.com/fdiiC0byXwg/ mqE:/ 07/08 :6pm S@l.Ch"
+        XCTAssertEqual(
+            LinkExtractor.firstURL(in: text)?.absoluteString,
+            "https://v.douyin.com/fdiiC0byXwg/"
+        )
+    }
+
+    func testDouyinNotePageImagesFromJSONLD() {
+        let html = #"""
+        <html><head><script type="application/ld+json">{"@context":"https://schema.org","@type":"article","headline":"图文","url":"https://www.douyin.com/note/7710910581876000435","image":["https://p3-pc-sign.douyinpic.com/tos-cn-i-0813c001/abc~tplv-dy-aweme-images:q75.webp?sc=image"]}</script></head></html>
+        """#
+        let metadata = HTMLMetadataExtractor.extract(
+            html: html,
+            finalURL: URL(string: "https://www.douyin.com/note/7710910581876000435")!
+        )
+        XCTAssertEqual(metadata.imageURLs.count, 1)
+        XCTAssertTrue(metadata.imageURLs.first?.absoluteString.contains("douyinpic.com") == true)
+        XCTAssertTrue(metadata.videoURLs.isEmpty)
+    }
+
+    func testDouyinDetailScopedToMatchingAwemeID() {
+        let html = #"""
+        <script>window._ROUTER_DATA = {"aweme_details":[
+          {"aweme_id":"1111111111111111111","video":{"play_addr":{"url_list":["https://v3-web.douyinvod.com/other.mp4"]}}},
+          {"aweme_id":"7710910581876000435","images":[{"url_list":["https://p3.douyinpic.com/obj/aweme_images/target.jpg"]}]}
+        ]}</script>
+        """#
+        let detail = DouyinParser().extractDetail(from: html, matching: "7710910581876000435")
+        XCTAssertEqual(detail.sourceID, "7710910581876000435")
+        XCTAssertTrue(detail.videos.isEmpty)
+        XCTAssertTrue(detail.images.contains { $0.absoluteString.contains("target.jpg") })
+    }
+
+    func testWebPImageNeedsConversionForPhotos() {
+        XCTAssertTrue(ImageFileProcessor.convertibleToJPEG(ext: "webp"))
+        XCTAssertFalse(ImageFileProcessor.convertibleToJPEG(ext: "jpg"))
+        XCTAssertFalse(ImageFileProcessor.convertibleToJPEG(ext: "mp4"))
     }
 }

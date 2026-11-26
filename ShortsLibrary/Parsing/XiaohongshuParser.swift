@@ -7,7 +7,9 @@ struct XiaohongshuParser: PlatformParser {
     func parse(url: URL) async throws -> ParsedMedia {
         let loaded: (String, URL)
         if let captured = try? await PublicPageLoader.loadXiaohongshuWithCapture(url: url),
-           captured.0.localizedCaseInsensitiveContains("sns-webpic") {
+           captured.0.localizedCaseInsensitiveContains("sns-webpic")
+                || captured.0.localizedCaseInsensitiveContains("noteDetailMap")
+                || captured.0.localizedCaseInsensitiveContains("sns-video") {
             loaded = captured
         } else {
             loaded = try await PublicPageLoader.load(url: url)
@@ -170,7 +172,7 @@ struct XiaohongshuParser: PlatformParser {
             .replacingOccurrences(of: "\\/", with: "/")
         guard let url = URL(string: cleaned),
               let host = url.host()?.lowercased(),
-              host.contains("xhscdn") else { return nil }
+              host.contains("xhscdn") || host.contains("xiaohongshu") else { return nil }
         let path = url.path
         let parts = path.split(separator: "/").map(String.init)
         guard let last = parts.last else { return nil }
