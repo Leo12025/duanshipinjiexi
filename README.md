@@ -17,7 +17,12 @@
 - `library.json` 元数据备份与恢复
 - SwiftData 管理元数据，原文件存于 App 沙盒 `Library/Application Support/ShortsLibrary/`
 - 资料库浏览、搜索、分享、保存到相册、导出到备忘录、删除
+- 可选 AI 解析：预设 Qwen-VL / 豆包 / 智谱 / Kimi / OpenAI / 自定义 OpenAI 兼容接口，结合平台文案与视频关键帧生成摘要、关键看点和标签
 - iPad 自适应分栏界面
+
+## AI 解析与隐私
+
+AI 解析默认关闭。开启后，标题、平台文案、封面和抽帧画面会发送到你在「我的」→「AI 解析设置」中选择的服务商；API Key 按服务商隔离保存在系统 Keychain，不写入 `library.json` 备份。服务商预设均为 OpenAI 兼容 Chat Completions 接口，可自由切换模型或填写自定义地址。
 
 ## 明确不做
 

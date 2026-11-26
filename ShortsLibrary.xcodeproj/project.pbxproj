@@ -18,6 +18,7 @@
 		950C8B43FC645930F760EC7B = {
 			isa = PBXGroup;
 			children = (
+				7CC38DD3EE6B469E6A8957A7,
 				76DEA004C242328B6F2ADF9C,
 				902472EED45C921C32199842,
 				6D5160370F99D98695D57D4F,
@@ -38,6 +39,7 @@
 		AA7210CD696C158B18E3F139 = {
 			isa = PBXGroup;
 			children = (
+				DC944D3D5549E35B495CFE82,
 				49D7EF6F6370FA421B24685C,
 			);
 			name = ShortsLibraryTests;
@@ -64,6 +66,69 @@
 			);
 			name = Products;
 			sourceTree = "<group>";
+		};
+		A7A7F3EF841A323CDC800CE8 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = AIProvider.swift;
+			sourceTree = "<group>";
+		};
+		A66601166EDDD6367E0CCCDB = {
+			isa = PBXBuildFile;
+			fileRef = A7A7F3EF841A323CDC800CE8;
+		};
+		7CC38DD3EE6B469E6A8957A7 = {
+			isa = PBXGroup;
+			children = (
+				A7A7F3EF841A323CDC800CE8,
+				94CA5301A308776B5FC6D11A,
+				A6EF011C98235729CB7B272A,
+				4B0D14EF7CB1DC843C4668F9,
+				BF7D9B0F5A094897C2228A7E,
+			);
+			name = AI;
+			path = AI;
+			sourceTree = "<group>";
+		};
+		94CA5301A308776B5FC6D11A = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = AISummaryService.swift;
+			sourceTree = "<group>";
+		};
+		B718620B5B73E70E7CE570B3 = {
+			isa = PBXBuildFile;
+			fileRef = 94CA5301A308776B5FC6D11A;
+		};
+		A6EF011C98235729CB7B272A = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = KeychainStore.swift;
+			sourceTree = "<group>";
+		};
+		A3E92A132E4052A9AF7E0CB3 = {
+			isa = PBXBuildFile;
+			fileRef = A6EF011C98235729CB7B272A;
+		};
+		4B0D14EF7CB1DC843C4668F9 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = OpenAICompatibleClient.swift;
+			sourceTree = "<group>";
+		};
+		B2B9A7B73F91A77104020C2A = {
+			isa = PBXBuildFile;
+			fileRef = 4B0D14EF7CB1DC843C4668F9;
+		};
+		BF7D9B0F5A094897C2228A7E = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = VideoFrameExtractor.swift;
+			sourceTree = "<group>";
+		};
+		C0B0596F9C510A8510D04C19 = {
+			isa = PBXBuildFile;
+			fileRef = BF7D9B0F5A094897C2228A7E;
 		};
 		76DEA004C242328B6F2ADF9C = {
 			isa = PBXFileReference;
@@ -480,19 +545,20 @@
 			isa = PBXBuildFile;
 			fileRef = B922E3DA3AFAB436D3EB1E1D;
 		};
-		FCF999A09852767692223060 = {
+		03B5AB3DC339969EFCDF7BEC = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
-			path = ActivityView.swift;
+			path = AISettingsView.swift;
 			sourceTree = "<group>";
 		};
-		D998C221951A5947ACA52096 = {
+		1815775EA067D032CCA8C527 = {
 			isa = PBXBuildFile;
-			fileRef = FCF999A09852767692223060;
+			fileRef = 03B5AB3DC339969EFCDF7BEC;
 		};
 		8066F5B18649E76D834B0D8D = {
 			isa = PBXGroup;
 			children = (
+				03B5AB3DC339969EFCDF7BEC,
 				FCF999A09852767692223060,
 				B0DCE95B817FC04EE0FDCE6D,
 				F63C52F055AF49853F0396D7,
@@ -511,6 +577,16 @@
 			name = UI;
 			path = UI;
 			sourceTree = "<group>";
+		};
+		FCF999A09852767692223060 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = ActivityView.swift;
+			sourceTree = "<group>";
+		};
+		D998C221951A5947ACA52096 = {
+			isa = PBXBuildFile;
+			fileRef = FCF999A09852767692223060;
 		};
 		B0DCE95B817FC04EE0FDCE6D = {
 			isa = PBXFileReference;
@@ -738,6 +814,16 @@
 			isa = PBXBuildFile;
 			fileRef = 42C916F3CC244FE1BBDC0E1C;
 		};
+		DC944D3D5549E35B495CFE82 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = AISummaryTests.swift;
+			sourceTree = "<group>";
+		};
+		D6CF4CB583EB672608FC67DF = {
+			isa = PBXBuildFile;
+			fileRef = DC944D3D5549E35B495CFE82;
+		};
 		49D7EF6F6370FA421B24685C = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.swift;
@@ -861,6 +947,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A66601166EDDD6367E0CCCDB,
+				B718620B5B73E70E7CE570B3,
+				A3E92A132E4052A9AF7E0CB3,
+				B2B9A7B73F91A77104020C2A,
+				C0B0596F9C510A8510D04C19,
 				FC6EFF4EDBE10BAFE3EFADFC,
 				33FE3497FE315483A8BC9647,
 				8119E779121B3C5E1488BB72,
@@ -896,6 +987,7 @@
 				ED323AC77C1555B5EB8B9E6A,
 				C3FB9717CC6134BEE909C96B,
 				A354A5A457FD1397D6F0A37F,
+				1815775EA067D032CCA8C527,
 				D998C221951A5947ACA52096,
 				D00791CFC2726EBE237BE3FD,
 				DAC3F1753043F88270BC3F6B,
@@ -963,6 +1055,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D6CF4CB583EB672608FC67DF,
 				FB75FD6445E41E541ECCE4B5,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

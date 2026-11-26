@@ -54,6 +54,17 @@ enum LibraryBackup {
                     downloadFailed: item.downloadFailed,
                     lastDownloadError: item.lastDownloadError,
                     needsAudioMux: item.needsAudioMux,
+                    aiSummary: item.aiSummary,
+                    aiHighlights: item.aiHighlights,
+                    aiTags: item.aiTags,
+                    aiContentType: item.aiContentType,
+                    aiTone: item.aiTone,
+                    aiTranscript: item.aiTranscript,
+                    aiProviderID: item.aiProviderID,
+                    aiModel: item.aiModel,
+                    aiStatus: item.aiStatus,
+                    aiError: item.aiError,
+                    aiUpdatedAt: item.aiUpdatedAt,
                     files: item.files.map { file in
                         LibraryBackupMediaFile(
                             relativePath: file.relativePath,
@@ -151,6 +162,17 @@ enum LibraryBackup {
             item.downloadFailed = saved.downloadFailed
             item.lastDownloadError = saved.lastDownloadError
             item.needsAudioMux = saved.needsAudioMux ?? false
+            item.aiSummary = saved.aiSummary ?? ""
+            item.aiHighlights = saved.aiHighlights ?? []
+            item.aiTags = saved.aiTags ?? []
+            item.aiContentType = saved.aiContentType
+            item.aiTone = saved.aiTone
+            item.aiTranscript = saved.aiTranscript
+            item.aiProviderID = saved.aiProviderID
+            item.aiModel = saved.aiModel
+            item.aiStatus = saved.aiStatus ?? "idle"
+            item.aiError = saved.aiError
+            item.aiUpdatedAt = saved.aiUpdatedAt
 
             for file in item.files { context.delete(file) }
             item.files = []
@@ -295,6 +317,17 @@ private struct LibraryBackupItem: Codable {
     let downloadFailed: Bool
     let lastDownloadError: String?
     let needsAudioMux: Bool?
+    let aiSummary: String?
+    let aiHighlights: [String]?
+    let aiTags: [String]?
+    let aiContentType: String?
+    let aiTone: String?
+    let aiTranscript: String?
+    let aiProviderID: String?
+    let aiModel: String?
+    let aiStatus: String?
+    let aiError: String?
+    let aiUpdatedAt: Date?
     let files: [LibraryBackupMediaFile]
 }
 

@@ -29,6 +29,18 @@ final class LibraryItem {
     var lastDownloadError: String?
     var needsAudioMux: Bool
 
+    var aiSummary: String = ""
+    var aiHighlights: [String] = []
+    var aiTags: [String] = []
+    var aiContentType: String?
+    var aiTone: String?
+    var aiTranscript: String?
+    var aiProviderID: String?
+    var aiModel: String?
+    var aiStatus: String = "idle"
+    var aiError: String?
+    var aiUpdatedAt: Date?
+
     @Relationship(deleteRule: .cascade)
     var files: [MediaFile] = []
 
@@ -62,6 +74,17 @@ final class LibraryItem {
         self.downloadFailed = false
         self.lastDownloadError = nil
         self.needsAudioMux = false
+        self.aiSummary = ""
+        self.aiHighlights = []
+        self.aiTags = []
+        self.aiContentType = nil
+        self.aiTone = nil
+        self.aiTranscript = nil
+        self.aiProviderID = nil
+        self.aiModel = nil
+        self.aiStatus = "idle"
+        self.aiError = nil
+        self.aiUpdatedAt = nil
     }
 
     var sourceEnum: MediaSource {

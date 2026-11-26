@@ -21,6 +21,7 @@ struct ProfileView: View {
 
     @State private var showingQueue = false
     @State private var showingFollows = false
+    @State private var showingAISettings = false
     @State private var showingRestore = false
     @State private var loginPlatform: PlatformLogin?
     @State private var backupURL: URL?
@@ -68,6 +69,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingFollows) {
                 FollowListView()
+            }
+            .sheet(isPresented: $showingAISettings) {
+                AISettingsView()
             }
             .sheet(item: $loginPlatform) { platform in
                 PlatformLoginView(platform: platform)
@@ -211,6 +215,15 @@ struct ProfileView: View {
                     icon: "person.2",
                     title: "关注列表",
                     subtitle: "同步、搜索与管理关注账号"
+                )
+            }
+            .foregroundStyle(.primary)
+
+            Button { showingAISettings = true } label: {
+                SettingsRow(
+                    icon: "sparkles",
+                    title: "AI 解析设置",
+                    subtitle: "服务商、模型、关键帧与总结偏好"
                 )
             }
             .foregroundStyle(.primary)

@@ -148,6 +148,7 @@ enum MediaRetryService {
             }
         }
 
+        AISummaryService.shared.scheduleAutoSummaryIfNeeded(item: item, context: context)
         try? context.save()
     }
 

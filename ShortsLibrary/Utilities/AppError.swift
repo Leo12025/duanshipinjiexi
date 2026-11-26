@@ -11,6 +11,11 @@ enum AppError: LocalizedError {
     case rateLimited
     case platformChanged(String)
     case verificationRequired(String)
+    case aiNotConfigured
+    case aiUploadDisabled
+    case aiNoMedia
+    case aiInvalidResponse
+    case aiHTTP(Int, String)
 
     var errorDescription: String? {
         switch self {
@@ -34,6 +39,16 @@ enum AppError: LocalizedError {
             return "\(platform)页面结构可能已变化，暂未能提取媒体，请稍后重试"
         case .verificationRequired(let platform):
             return "\(platform)需要完成页面验证，请在 App 内打开并完成验证后重试"
+        case .aiNotConfigured:
+            return "AI 服务未配置完成，请在「我的」→「AI 解析设置」中填写服务商、模型和 API Key"
+        case .aiUploadDisabled:
+            return "尚未允许上传画面与文案，请先在「AI 解析设置」中开启"
+        case .aiNoMedia:
+            return "没有可用于 AI 分析的视频关键帧或图片"
+        case .aiInvalidResponse:
+            return "AI 服务返回了无法解析的结果"
+        case .aiHTTP(let code, let detail):
+            return "AI 服务请求失败（HTTP \(code)）：\(detail)"
         }
     }
 }

@@ -16,6 +16,9 @@ struct ItemDetailView: View {
     @State private var showingFullScreenImages = false
     @State private var fullScreenIndex = 0
     @State private var showingFullScreenVideo = false
+    @State private var isSummarizing = false
+
+    @AppStorage(AISettingsKey.allowUpload) private var aiUploadAllowed = false
 
     var body: some View {
         ScrollView {
@@ -46,6 +49,8 @@ struct ItemDetailView: View {
                             .font(.body)
                             .textSelection(.enabled)
                     }
+
+                    aiSummarySection
 
                     if let resolution = item.resolution {
                         Text("画质：\(resolution)")
@@ -201,6 +206,98 @@ struct ItemDetailView: View {
     }
 
     @ViewBuilder
+    private var aiSummarySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if item.aiStatus == "processing" {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("AI 正在分析画面与文案…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else if !item.aiSummary.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Label("AI 总结", systemImage: "sparkles")
+                            .font(.caption.weight(.semibold))
+                        Spacer()
+                        if let provider = item.aiProviderID, let aiModel = item.aiModel {
+                            Text("\(provider) · \(aiModel)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Text(item.aiSummary)
+                        .font(.body)
+                        .textSelection(.enabled)
+
+                    if !item.aiHighlights.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("关键看点")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            ForEach(item.aiHighlights, id: \.self) { text in
+                                Label(text, systemImage: "checkmark.circle")
+                                    .font(.caption)
+                            }
+                        }
+                    }
+
+                    if !item.aiTags.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(item.aiTags, id: \.self) { tag in
+                                Text(tag)
+                                    .font(.caption2)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.accentColor.opacity(0.12), in: Capsule())
+                            }
+                        }
+                    }
+
+                    if let contentType = item.aiContentType, !contentType.isEmpty {
+                        Text("类型：\(contentType)　基调：\(item.aiTone ?? "—")")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let updated = item.aiUpdatedAt {
+                        Text("更新于 \(updated.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(12)
+                .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 10))
+            } else if item.aiStatus == "failed" {
+                Text(item.aiError ?? "AI 总结失败")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            Button {
+                Task { await summarize() }
+            } label: {
+                Label(
+                    item.aiSummary.isEmpty ? "生成 AI 总结" : "重新生成 AI 总结",
+                    systemImage: "sparkles"
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .disabled(isSummarizing || !aiUploadAllowed)
+
+            if !aiUploadAllowed {
+                Text("需先在「我的」→「AI 解析设置」中允许上传画面与文案")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
     private var mediaSection: some View {
         if item.kindEnum == .video, let video = item.videoFile, video.existsOnDisk {
             Button {
@@ -333,6 +430,21 @@ struct ItemDetailView: View {
         let isAudioRepair = item.needsAudioMux
         MediaRetryService.enqueueRetry(item: item, in: modelContext)
         toast = isAudioRepair ? "已开始修复音轨" : "已加入下载队列"
+    }
+
+    private func summarize() async {
+        guard aiUploadAllowed else {
+            toast = "请先允许上传画面与文案"
+            return
+        }
+        isSummarizing = true
+        defer { isSummarizing = false }
+        do {
+            try await AISummaryService.shared.summarize(item: item, modelContext: modelContext, force: true)
+            toast = "AI 总结已更新"
+        } catch {
+            toast = error.localizedDescription
+        }
     }
 }
 
