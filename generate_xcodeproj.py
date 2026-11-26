@@ -533,6 +533,7 @@ common_settings = {
 debug_settings = dict(common_settings)
 debug_settings.update(
     {
+        "COPY_PHASE_STRIP": "NO",
         "DEBUG_INFORMATION_FORMAT": "dwarf",
         "ENABLE_TESTABILITY": "YES",
         "GCC_OPTIMIZATION_LEVEL": "0",
@@ -587,6 +588,7 @@ parent_bundle_id = (
     or "com.leo.shortslibrary"
 )
 widget_overrides = {
+    "COPY_PHASE_STRIP": "NO",
     "GENERATE_INFOPLIST_FILE": "NO",
     "INFOPLIST_FILE": live_activity_info_path,
     "PRODUCT_BUNDLE_IDENTIFIER": parent_bundle_id + ".liveactivity",
