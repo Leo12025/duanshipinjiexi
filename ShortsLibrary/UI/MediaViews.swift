@@ -5,9 +5,15 @@ import AVFoundation
 
 private enum PlayerAudioSession {
     static func prepare(mode: AVAudioSession.Mode = .moviePlayback) {
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: mode, options: [.duckOthers])
-        try? session.setActive(true, options: .notifyOthersOnDeactivation)
+        Task.detached(priority: .utility) {
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.playback, mode: mode, options: [.duckOthers])
+            if #available(iOS 27.0, *) {
+                session.activate(options: []) { _, _ in }
+            } else {
+                try? session.setActive(true, options: .notifyOthersOnDeactivation)
+            }
+        }
     }
 }
 
