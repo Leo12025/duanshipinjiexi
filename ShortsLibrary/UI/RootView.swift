@@ -95,11 +95,13 @@ struct RootView: View {
             await NotificationService.shared.requestAuthorization()
             await login.refresh()
             checkClipboard()
+            checkPendingShare()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 Task { await login.refresh() }
                 checkClipboard()
+                checkPendingShare()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openPlatformLogin)) { output in
@@ -125,6 +127,15 @@ struct RootView: View {
         } catch {
             toastMessage = error.localizedDescription
         }
+    }
+
+    private func checkPendingShare() {
+        guard let text = SharedLinkStore.consume(),
+              let url = LinkExtractor.firstURL(in: text),
+              ParserRegistry.parser(for: url) != nil else { return }
+        lastPromptedLink = url.absoluteString
+        selectedTab = 0
+        Task { await ingestDirectly(url: url) }
     }
 
     private func checkClipboard() {

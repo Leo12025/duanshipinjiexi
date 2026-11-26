@@ -10,6 +10,7 @@
 			children = (
 				950C8B43FC645930F760EC7B,
 				CD014624C1B96FA353D15D35,
+				BE9D8257179B4D32149D0F91,
 				AA7210CD696C158B18E3F139,
 				74E873CC8E059A15F9F0F72E,
 			);
@@ -57,11 +58,23 @@
 			path = ShortsLibraryLiveActivity;
 			sourceTree = "<group>";
 		};
+		BE9D8257179B4D32149D0F91 = {
+			isa = PBXGroup;
+			children = (
+				62E83E954849DB1AD33D5586,
+				8C2BA81FFBC75F5C9899EB8A,
+				CC168068CA19408C0DCC11DC,
+			);
+			name = ShortsLibraryShare;
+			path = ShortsLibraryShare;
+			sourceTree = "<group>";
+		};
 		74E873CC8E059A15F9F0F72E = {
 			isa = PBXGroup;
 			children = (
 				BE45210D12E16CFEBEAE763B,
 				F90597A9AC62CDA19E913240,
+				55D7B1942ED6AC8EC6729491,
 				1FD759BA7389CD996C9B15E1,
 			);
 			name = Products;
@@ -854,6 +867,32 @@
 			isa = PBXBuildFile;
 			fileRef = CB46E3668B7CD8F8C24BE483;
 		};
+		62E83E954849DB1AD33D5586 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = ShareViewController.swift;
+			sourceTree = "<group>";
+		};
+		71796A46A35774D93084B30C = {
+			isa = PBXBuildFile;
+			fileRef = 62E83E954849DB1AD33D5586;
+		};
+		8C2BA81FFBC75F5C9899EB8A = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = SharedLinkStore.swift;
+			sourceTree = "<group>";
+		};
+		9D9503CB4941D145029AAEAE = {
+			isa = PBXBuildFile;
+			fileRef = 8C2BA81FFBC75F5C9899EB8A;
+		};
+		CC168068CA19408C0DCC11DC = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.xml;
+			path = Info.plist;
+			sourceTree = "<group>";
+		};
 		D4558582D817AD11DD210793 = {
 			isa = PBXFileReference;
 			lastKnownFileType = text.plist.xml;
@@ -920,6 +959,17 @@
 		7470202A6CC05DCA2D077F30 = {
 			isa = PBXBuildFile;
 			fileRef = F90597A9AC62CDA19E913240;
+		};
+		55D7B1942ED6AC8EC6729491 = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.app-extension;
+			includeInIndex = 0;
+			path = ShortsLibraryShare.appex;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		C3F067365D35EA1C6230D598 = {
+			isa = PBXBuildFile;
+			fileRef = 55D7B1942ED6AC8EC6729491;
 		};
 		A08675197E6B11600DA3D50E = {
 			isa = PBXFileReference;
@@ -1011,6 +1061,7 @@
 				F235B2DC66718A7BB56C5101,
 				E249AE72395F29E1195AD425,
 				69D00A1B243F672C1F7C1F7A,
+				9D9503CB4941D145029AAEAE,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1040,6 +1091,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		51E5CF122B2C671BFD4DD1A6 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				71796A46A35774D93084B30C,
+				9D9503CB4941D145029AAEAE,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2CDAD43D3D4D859EDF492AF6 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		556C221AC99C86004DA35A89 = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1047,6 +1114,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				7470202A6CC05DCA2D077F30,
+				C3F067365D35EA1C6230D598,
 			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1088,6 +1156,18 @@
 			target = 3AC7B398C3CCF7312C98DDC3;
 			targetProxy = 2274E666A29684E751DDF039;
 		};
+		6DD5603584D1A9326836E59C = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AE9D793910523DD9794189F5;
+			proxyType = 1;
+			remoteGlobalIDString = 3F37956467E709D9ED843B49;
+			remoteInfo = ShortsLibraryShare;
+		};
+		8587BC4487929880086488DD = {
+			isa = PBXTargetDependency;
+			target = 3F37956467E709D9ED843B49;
+			targetProxy = 6DD5603584D1A9326836E59C;
+		};
 		CDB6F4A7E72E6C765E7FA822 = {
 			isa = PBXTargetDependency;
 			target = BF17474B2E0B17438DC2176A;
@@ -1106,6 +1186,7 @@
 			);
 			dependencies = (
 				3519704312C1E0BD7E637DFB,
+				8587BC4487929880086488DD,
 			);
 			name = ShortsLibrary;
 			productName = ShortsLibrary;
@@ -1143,6 +1224,22 @@
 			name = ShortsLibraryLiveActivity;
 			productName = ShortsLibraryLiveActivity;
 			productReference = F90597A9AC62CDA19E913240;
+			productType = com.apple.product-type.app-extension;
+		};
+		3F37956467E709D9ED843B49 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 416CBBFE8ED08C7505E56156;
+			buildPhases = (
+				51E5CF122B2C671BFD4DD1A6,
+				2CDAD43D3D4D859EDF492AF6,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShortsLibraryShare;
+			productName = ShortsLibraryShare;
+			productReference = 55D7B1942ED6AC8EC6729491;
 			productType = com.apple.product-type.app-extension;
 		};
 		40BC6E4EC777C35CD827CBB6 = {
@@ -1258,6 +1355,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = -Onone;
+				CODE_SIGN_ENTITLEMENTS = ShortsLibrary/ShortsLibrary.entitlements;
 			};
 			name = Debug;
 		};
@@ -1296,6 +1394,7 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = -O;
 				VALIDATE_PRODUCT = YES;
+				CODE_SIGN_ENTITLEMENTS = ShortsLibrary/ShortsLibrary.entitlements;
 			};
 			name = Release;
 		};
@@ -1457,6 +1556,85 @@
 			};
 			name = Release;
 		};
+		FB450CD47AC7F2379AECDE65 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = W9MA4VFH3F;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShortsLibraryShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leo12025.shortslibrary.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = -Onone;
+				CODE_SIGN_ENTITLEMENTS = ShortsLibraryShare/ShortsLibraryShare.entitlements;
+			};
+			name = Debug;
+		};
+		B61355425C3E3C66E309CE05 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = W9MA4VFH3F;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShortsLibraryShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leo12025.shortslibrary.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf-with-dsym;
+				ENABLE_NS_ASSERTIONS = NO;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = -O;
+				VALIDATE_PRODUCT = YES;
+				CODE_SIGN_ENTITLEMENTS = ShortsLibraryShare/ShortsLibraryShare.entitlements;
+			};
+			name = Release;
+		};
 		12D04D787E90C9B967248BFD = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1493,6 +1671,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		416CBBFE8ED08C7505E56156 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB450CD47AC7F2379AECDE65,
+				B61355425C3E3C66E309CE05,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		AE9D793910523DD9794189F5 = {
 			isa = PBXProject;
 			attributes = {
@@ -1504,6 +1691,10 @@
 						ProvisioningStyle = Automatic;
 					};
 					3AC7B398C3CCF7312C98DDC3 = {
+						CreatedOnToolsVersion = 27.2;
+						ProvisioningStyle = Automatic;
+					};
+					3F37956467E709D9ED843B49 = {
 						CreatedOnToolsVersion = 27.2;
 						ProvisioningStyle = Automatic;
 					};
@@ -1525,6 +1716,7 @@
 			targets = (
 				BF17474B2E0B17438DC2176A,
 				3AC7B398C3CCF7312C98DDC3,
+				3F37956467E709D9ED843B49,
 				19B8ECC92DF1C589B636F9EF,
 			);
 		};
