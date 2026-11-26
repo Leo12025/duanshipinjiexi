@@ -41,6 +41,7 @@ share_sources = sorted(
     str(path.relative_to(ROOT)) for path in share_root.glob("*.swift")
 )
 shared_store_path = "ShortsLibraryShare/SharedLinkStore.swift"
+shared_link_extractor_path = "ShortsLibrary/Parsing/LinkExtractor.swift"
 share_info_path = "ShortsLibraryShare/Info.plist"
 share_entitlements_path = "ShortsLibraryShare/ShortsLibraryShare.entitlements"
 app_entitlements_path = "ShortsLibrary/ShortsLibrary.entitlements"
@@ -332,6 +333,8 @@ for rel in share_sources:
     add(build, isa="PBXBuildFile", fileRef=ref)
     share_source_ids.append(build)
     objects[share_group]["children"].append(ref)
+
+share_source_ids.append(ident("build:" + shared_link_extractor_path))
 
 add(
     shared_store_ref_id,

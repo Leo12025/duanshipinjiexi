@@ -19,8 +19,32 @@ final class ShareViewController: SLComposeServiceViewController {
 
     override func didSelectPost() {
         let typed = contentText.trimmingCharacters(in: .whitespacesAndNewlines)
-        SharedLinkStore.enqueue(typed.isEmpty ? (incomingText ?? "") : typed)
+        let text = typed.isEmpty ? (incomingText ?? "") : typed
+        guard !text.isEmpty else {
+            finish()
+            return
+        }
+
+        if let url = LinkExtractor.firstURL(in: text),
+           let hostURL = Self.hostURL(for: url) {
+            extensionContext?.open(hostURL) { [weak self] opened in
+                if !opened { SharedLinkStore.enqueue(text) }
+                self?.finish()
+            }
+        } else {
+            SharedLinkStore.enqueue(text)
+            finish()
+        }
+    }
+
+    private func finish() {
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+    }
+
+    private static func hostURL(for url: URL) -> URL? {
+        var components = URLComponents(string: "shortsaver://")
+        components?.queryItems = [URLQueryItem(name: "url", value: url.absoluteString)]
+        return components?.url
     }
 
     override func configurationItems() -> [Any]! {
