@@ -36,7 +36,10 @@ enum MediaQualityHeuristic {
         var bitrate = hint?.bitrate
 
         if width == nil || height == nil,
-           let groups = captures(pattern: #"(\d{2,5})[x](\d{2,5})"#, in: text), groups.count >= 3 {
+           let groups = captures(
+               pattern: #"(?<![a-z0-9])(\d{2,5})[x](\d{2,5})(?![a-z0-9])"#,
+               in: text
+           ), groups.count >= 3 {
             if width == nil { width = Int(groups[1]) }
             if height == nil { height = Int(groups[2]) }
         }

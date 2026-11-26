@@ -68,6 +68,11 @@ final class WebViewPageLoader: NSObject, WKNavigationDelegate {
             )
         )
         let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: configuration)
+        let host = url.host()?.lowercased() ?? ""
+        if host.contains("douyin") || host.contains("iesdouyin")
+            || host.contains("xiaohongshu") || host.contains("xhslink") {
+            webView.customUserAgent = NetworkClient.mobileUserAgent
+        }
         self.webView = webView
         self.originalURL = url
         webView.navigationDelegate = self

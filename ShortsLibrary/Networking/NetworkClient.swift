@@ -21,7 +21,7 @@ final class NetworkClient {
             return initial
         }
 
-        if let fallback = try? await fetchHTML(from: url, userAgent: Self.searchEngineUA),
+        if let fallback = try? await fetchHTML(from: initial.1, userAgent: Self.searchEngineUA),
            fallback.0.contains("application/ld+json") || fallback.0.contains("aweme_detail") {
             return fallback
         }

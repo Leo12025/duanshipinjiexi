@@ -130,6 +130,34 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(parsed.fallbackVideos.first?.url, watermarkedURL)
     }
 
+    func testVideoStreamURLNotTreatedAsImage() {
+        let html = #"""
+        <script>window.__INITIAL_STATE__={"note":{"noteDetailMap":{"n1":{"note":{"imageList":[{"infoList":[{"url":"https://sns-video-qc.xhscdn.com/stream/1/10/19/file_19.mp4?sign=abc"}]}]}}}}}}</script>
+        """#
+        let metadata = HTMLMetadataExtractor.extract(
+            html: html,
+            finalURL: URL(string: "https://www.xiaohongshu.com/explore/n1")!
+        )
+        XCTAssertFalse(metadata.imageURLs.contains { $0.pathExtension == "mp4" })
+    }
+
+    func testKuaishouCDNHostNotParsedAsResolution() {
+        let url = URL(string: "https://v23-3.kwaicdn.com/schedule/2408x874cx0x31xx15z/media_720p_b.mp4?tt=b")!
+        let candidate = MediaQualityHeuristic.videoCandidate(for: url)
+        XCTAssertNil(candidate.width)
+        XCTAssertEqual(candidate.height, 720)
+        XCTAssertEqual(candidate.quality, "720p")
+    }
+
+    func testDouyinDetailDedupesTemplateVariants() {
+        let html = #"""
+        <script>{"aweme_detail":{"aweme_id":"7712067669570895026","images":[{"url_list":["https://p3.douyinpic.com/tos-cn-i/x~tplv-dy-aweme-images:q75.webp?biz_tag=aweme_images","https://p11.douyinpic.com/tos-cn-i/x~tplv-dy-water-v2:q75.webp?biz_tag=aweme_images"]}],"music_info":{"cover":{"url_list":["https://p11.douyinpic.com/aweme/100x100/music.jpeg"]}}}}</script>
+        """#
+        let detail = DouyinParser().extractDetail(from: html)
+        XCTAssertEqual(detail.images.count, 1)
+        XCTAssertTrue(detail.images.first?.path.contains("aweme-images:q75") == true)
+    }
+
     func testDouyinAudioExtraction() {
         let html = #"""
         <script>window._ROUTER_DATA = {"aweme_detail":{"video":{"play_addr":{"url_list":["https://v3-web.douyinvod.com/video.mp4"]}},"music_info":{"audio_url":{"url_list":["https://sf1-cdn-tos.douyinstatic.com/obj/audio.mp3"]}}}}</script>
@@ -343,6 +371,28 @@ final class ParserTests: XCTestCase {
             LinkExtractor.firstURL(in: text)?.absoluteString,
             "https://v.douyin.com/fdiiC0byXwg/"
         )
+    }
+
+    func testUserProvidedShareSamples() async {
+        let samples: [(String, String, String, String)] = [
+            ("抖音视频", "0.02 复制打开抖音，看看【Helen lin🌷的作品】妈妈的爱是圆的，没有起点，也没有终点。# 我的阳光... https://v.douyin.com/yOeF20Vs-1g/ 10/06 u@f.ba :5pm pQX:/", "https://v.douyin.com/yOeF20Vs-1g/", "抖音"),
+            ("抖音图文4张", "6.64 吃好睡好🫶# 生活碎片分享 # 梁颢峥 # 卓颢嵘 # 吃遍大街小巷的美食  https://v.douyin.com/iBe8eDCIkmQ/ 复制此链接，打开抖音搜索，直接观看视频！ Cho:/ Y@M.jc 12/30 :0pm", "https://v.douyin.com/iBe8eDCIkmQ/", "抖音"),
+            ("抖音动态图片1张", "7.15 复制打开抖音，看看【@米粒的图文作品】饿了一个鸡蛋对付一下吧!专家不是说睡前两小时不要吃... https://v.douyin.com/8K_0l9RnGNI/ :9pm a@n.DU 11/24 eOk:/", "https://v.douyin.com/8K_0l9RnGNI/", "抖音"),
+            ("抖音动态图片3张", "1.25 库存.# 小朋友的泡泡玛特 # 收到礼物的小孩 # 篮球男孩 # 抖音二创激励计划 # LELE篮球日记  https://v.douyin.com/tC1P_Oxe3M0/ 复制此链接，打开抖音搜索，直接观看视频！ :8pm 02/16 MjP:/ R@X.md", "https://v.douyin.com/tC1P_Oxe3M0/", "抖音"),
+            ("小红书视频", "努力做一个时间管理大师 今天复习任务重 硬是把原定的... https://xhslink.cn/o/mOpd7ARHkx 跳转【小红书】看看笔记详情~", "https://xhslink.cn/o/mOpd7ARHkx", "小红书"),
+            ("小红书动态图片1张", "紧张的小脚丫😂 https://xhslink.cn/o/5bDuWEEdxv6 去【小红书】逛逛，这篇笔记超有料！", "https://xhslink.cn/o/5bDuWEEdxv6", "小红书"),
+            ("小红书图文1张", "小哥哥的晚自习开始了 https://xhslink.cn/o/44ARl4jX1El 先复制这段，再进【小红书】就能浏览笔记。", "https://xhslink.cn/o/44ARl4jX1El", "小红书"),
+            ("小红书图文7张", "今天的课堂主角是游泳小将🏊 不同的运动项目，相同的... https://xhslink.cn/o/7FuJL3HGnGk 【小红书】上有超棒的笔记，快来瞧瞧！", "https://xhslink.cn/o/7FuJL3HGnGk", "小红书"),
+            ("小红书动态图片11张", "初中生打完羽毛球，书包一背就往家走 昊哥背着书包往... https://xhslink.cn/o/AmjNRhLYhr 先复制这段内容，再进入【小红书】即可阅读笔记。", "https://xhslink.cn/o/AmjNRhLYhr", "小红书"),
+            ("快手视频", "https://v.kuaishou.com/K2ELTWfL 上学咯 该作品在快手被播放过2.1万次，点击链接，打开【快手】直接观看！", "https://v.kuaishou.com/K2ELTWfL", "快手"),
+            ("快手图文4张", #"https://v.kuaishou.com/JU3JaHG3 小小身影站高处，眼里全是光 "波比又困了 "骗你生儿子 "兄弟装 该作品在快手被播放过1.1万次，点击链接，打开【快手】直接观看！"#, "https://v.kuaishou.com/JU3JaHG3", "快手"),
+            ("快手动态图片1张", #"https://v.kuaishou.com/nmQGe74X 记录的意义是让幸福可以翻阅 好好珍惜和孩子相伴的每一天来日并不方长 童年何其短暂，当下的温柔与陪伴，才是人间最好！"两个儿子 "拍照记录 "记录真实生活 "记录幸福时刻 该作品在快手被播放过1.9万次，点击链接，打开【快手】直接观看！"#, "https://v.kuaishou.com/nmQGe74X", "快手")
+        ]
+        for (name, text, expectedURL, expectedPlatform) in samples {
+            XCTAssertEqual(LinkExtractor.firstURL(in: text)?.absoluteString, expectedURL, "\(name) 链接提取")
+            let platform = await LinkIngestService.detectPlatform(in: text)
+            XCTAssertEqual(platform, expectedPlatform, "\(name) 平台识别")
+        }
     }
 
     func testDouyinNotePageImagesFromJSONLD() {

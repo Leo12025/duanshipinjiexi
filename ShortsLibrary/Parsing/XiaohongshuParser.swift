@@ -24,7 +24,8 @@ struct XiaohongshuParser: PlatformParser {
 
         var assets = metadata.imageURLs.compactMap { url -> ImageAsset? in
             let host = url.host()?.lowercased() ?? ""
-            guard host.contains("sns-webpic") || host.contains("xhscdn") else { return nil }
+            guard host.contains("sns-webpic") else { return nil }
+            guard !["mp4", "m3u8", "mov", "webm"].contains(url.pathExtension.lowercased()) else { return nil }
             guard let fileID = fileID(from: url.absoluteString),
                   let original = originalImageURL(fileID: fileID) else { return nil }
             return ImageAsset(url: original, livePhotoVideo: nil)
@@ -34,8 +35,14 @@ struct XiaohongshuParser: PlatformParser {
         var videoURLs = metadata.videoURLs + page.videos
         videoURLs = unique(videoURLs)
 
+        let qualityHints = videoQualityHints(from: html)
         let videos = videoURLs.map {
-            MediaQualityHeuristic.videoCandidate(for: $0, hint: metadata.videoQualityHints[$0])
+            MediaQualityHeuristic.videoCandidate(
+                for: $0,
+                hint: qualityHints[$0]
+                    ?? qualityHints[baseURL(from: $0) ?? $0]
+                    ?? metadata.videoQualityHints[$0]
+            )
         }
         let images = MediaQualityHeuristic.sortedImages(assets.map(\.url))
         let livePhotoVideos = assets.map(\.livePhotoVideo)
@@ -176,7 +183,12 @@ struct XiaohongshuParser: PlatformParser {
         let path = url.path
         let parts = path.split(separator: "/").map(String.init)
         guard let last = parts.last else { return nil }
-        return last.split(separator: "!").first.map(String.init)
+        let file = last.split(separator: "!").first.map(String.init) ?? last
+        guard parts.count >= 3 else { return file }
+        // sns-webpic 的路径形如 /yyyymmddHHmm/<hash>/[notes_uhdr/]<fileId>!...，
+        // 保留 notes_uhdr / notes_pre_post 这类前缀，原图 CDN 才能命中。
+        let prefix = parts.dropFirst(2).dropLast().filter { !$0.isEmpty }
+        return (prefix + [file]).joined(separator: "/")
     }
 
     private func originalImageURL(fileID: String) -> URL? {
@@ -323,6 +335,76 @@ struct XiaohongshuParser: PlatformParser {
             return decoded.trimmingCharacters(in: CharacterSet(charactersIn: "\\"))
         }
         return value
+    }
+
+    private func baseURL(from url: URL) -> URL? {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        components.query = nil
+        components.fragment = nil
+        return components.url
+    }
+
+    private func videoQualityHints(from html: String) -> [URL: VideoQualityHint] {
+        var hints: [URL: VideoQualityHint] = [:]
+        func store(_ hint: VideoQualityHint, for url: URL) {
+            for key in [url, baseURL(from: url)].compactMap({ $0 }) {
+                let current = (hints[key]?.width ?? 0) * (hints[key]?.height ?? 0)
+                if (hint.width ?? 0) * (hint.height ?? 0) > current { hints[key] = hint }
+            }
+        }
+
+        let pattern = #""mediaV2"\s*:\s*"((?:[^"\\]|\\.)*)""#
+        for raw in captures(pattern: pattern, in: html) {
+            guard let data = decode(raw).data(using: .utf8),
+                  let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let stream = object["stream"] as? [String: Any] else { continue }
+            for codec in ["h264", "h265", "h266", "av1"] {
+                guard let items = stream[codec] as? [[String: Any]] else { continue }
+                for item in items {
+                    let hint = VideoQualityHint(
+                        width: item["width"] as? Int,
+                        height: item["height"] as? Int,
+                        bitrate: (item["avg_bitrate"] as? Int) ?? (item["video_bitrate"] as? Int),
+                        quality: item["quality_type"] as? String
+                    )
+                    var urls: [URL] = []
+                    if let master = item["master_url"] as? String, let url = makeURL(from: master) {
+                        urls.append(url)
+                    }
+                    if let backups = item["backup_urls"] as? [String] {
+                        urls.append(contentsOf: backups.compactMap { makeURL(from: $0) })
+                    }
+                    for url in urls { store(hint, for: url) }
+                }
+            }
+        }
+
+        for raw in jsonArrays(forKey: "imageList", in: html) {
+            guard let data = raw.data(using: .utf8),
+                  let items = try? JSONSerialization.jsonObject(with: data) as? [Any] else { continue }
+            for item in items {
+                guard let image = item as? [String: Any],
+                      image["livePhoto"] as? Bool == true,
+                      let width = image["width"] as? Int,
+                      let height = image["height"] as? Int,
+                      let stream = image["stream"] as? [String: Any] else { continue }
+                let hint = VideoQualityHint(width: width, height: height, bitrate: nil, quality: nil)
+                for codec in ["h264", "h265", "h266", "av1"] {
+                    guard let entries = stream[codec] as? [[String: Any]] else { continue }
+                    for entry in entries {
+                        if let master = entry["masterUrl"] as? String, let url = makeURL(from: master) {
+                            store(hint, for: url)
+                        }
+                        if let backups = entry["backupUrls"] as? [String] {
+                            for raw in backups {
+                                if let url = makeURL(from: raw) { store(hint, for: url) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return hints
     }
 
     private func firstCapture(pattern: String, in text: String) -> String? {

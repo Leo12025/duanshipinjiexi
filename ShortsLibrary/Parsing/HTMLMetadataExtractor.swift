@@ -249,6 +249,8 @@ enum HTMLMetadataExtractor {
             .replacingOccurrences(of: #"\/"#, with: "/")
             .replacingOccurrences(of: "%5C", with: "")
             .replacingOccurrences(of: "\\", with: "")
+            .replacingOccurrences(of: "u0026", with: "&")
+            .replacingOccurrences(of: "u003D", with: "=")
     }
 
     private static func isVideoURL(_ url: URL) -> Bool {
@@ -293,6 +295,8 @@ enum HTMLMetadataExtractor {
         let path = url.path.lowercased()
         let imageExtensions = ["jpg", "jpeg", "png", "apng", "gif", "webp", "heic", "image", "awebp"]
         if path.contains("avatar") || path.contains("image-cut-tos-priv") { return false }
+        if ["mp4", "m3u8", "mov", "webm"].contains(ext) { return false }
+        if host.contains("sns-video") || path.contains("/stream/") { return false }
         return imageExtensions.contains(ext)
             || host.contains("xhscdn")
             || host.contains("sns-webpic")

@@ -38,7 +38,9 @@ struct DouyinParser: PlatformParser {
         let isImagePage = Self.isImagePage(finalURL)
         let audioURL = detail.audioURL ?? metadata.audioURLs.first
 
-        var imageURLs = isVideoPage ? detail.images : metadata.imageURLs + detail.images
+        var imageURLs = isVideoPage
+            ? (metadata.image.map { [$0] } ?? detail.images)
+            : metadata.imageURLs + detail.images
         imageURLs = unique(imageURLs)
 
         var videoSources: [VideoSource] = []
@@ -56,20 +58,23 @@ struct DouyinParser: PlatformParser {
                 ))
             }
         }
-        for url in metadata.videoURLs {
-            if let clean = Self.noWatermarkVariant(of: url) {
-                videoSources.append(VideoSource(
-                    url: clean,
-                    context: "metadata play_addr",
-                    isConvertedNoWatermark: true
-                ))
-                videoSources.append(VideoSource(url: url, context: "metadata download_addr"))
-            } else {
-                videoSources.append(VideoSource(url: url, context: "metadata"))
+        if isVideoPage {
+            for url in metadata.videoURLs {
+                guard Self.isUsableVideoURL(url) else { continue }
+                if let clean = Self.noWatermarkVariant(of: url) {
+                    videoSources.append(VideoSource(
+                        url: clean,
+                        context: "metadata play_addr",
+                        isConvertedNoWatermark: true
+                    ))
+                    videoSources.append(VideoSource(url: url, context: "metadata download_addr"))
+                } else {
+                    videoSources.append(VideoSource(url: url, context: "metadata"))
+                }
             }
         }
         videoSources.append(contentsOf: detail.videos.filter {
-            audioURL != nil || !$0.isConvertedNoWatermark
+            Self.isUsableVideoURL($0.url) && (audioURL != nil || !$0.isConvertedNoWatermark)
         })
         videoSources = uniqueVideoSources(videoSources)
 
@@ -83,14 +88,11 @@ struct DouyinParser: PlatformParser {
             )
         }
         let images = MediaQualityHeuristic.sortedImages(imageURLs)
-        if (videos.isEmpty && images.isEmpty) || (isVideoPage && videos.isEmpty) {
+        if videos.isEmpty && images.isEmpty {
             if PublicPageLoader.requiresLogin(html: html) {
                 throw AppError.loginRequired(MediaSource.douyin.displayName)
             }
-            if !videos.isEmpty || !images.isEmpty {
-                throw AppError.parsingFailed("未能提取抖音视频地址，请稍后重试")
-            }
-            throw AppError.noMedia
+            throw AppError.parsingFailed("抖音页面未返回可解析的媒体，请在 App 内打开并完成验证后重试")
         }
 
         let kind: MediaKind = isImagePage && !images.isEmpty
@@ -324,6 +326,10 @@ struct DouyinParser: PlatformParser {
         var cleaned = raw
             .replacingOccurrences(of: #"\/"#, with: "/")
             .replacingOccurrences(of: #"\u002F"#, with: "/")
+            .replacingOccurrences(of: #"\u0026"#, with: "&")
+            .replacingOccurrences(of: "u0026", with: "&")
+            .replacingOccurrences(of: #"\u003D"#, with: "=")
+            .replacingOccurrences(of: "u003D", with: "=")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let lowerCleaned = cleaned.lowercased()
         if !lowerCleaned.contains("://"),
@@ -393,7 +399,42 @@ struct DouyinParser: PlatformParser {
     }
 
     private func unique(_ urls: [URL]) -> [URL] {
-        URL.dedupeMedia(urls)
+        let isPostImageURL: (URL) -> Bool = { url in
+            let path = url.path.lowercased()
+            return url.absoluteString.lowercased().contains("biz_tag=aweme_images")
+                || path.contains("aweme_images")
+                || path.contains("image_posters")
+        }
+        let hasPostImages = urls.contains(where: isPostImageURL)
+        var groups: [String: URL] = [:]
+        var order: [String] = []
+        for url in urls {
+            let path = url.path.lowercased()
+            if path.contains("/ies-music/") || path.contains("avatar") || path.contains("image-cut-tos-priv") {
+                continue
+            }
+            let key = path.split(separator: "~", maxSplits: 1).first.map(String.init) ?? path
+            let isPostImage = isPostImageURL(url)
+            if hasPostImages && !isPostImage { continue }
+            func score(_ candidate: URL) -> Int {
+                let candidatePath = candidate.path.lowercased()
+                if candidatePath.contains("water") { return 0 }
+                if candidatePath.contains("q75") { return 2 }
+                return 1
+            }
+            if let existing = groups[key] {
+                let existingAbsolute = existing.absoluteString.lowercased()
+                let existingIsPost = existingAbsolute.contains("biz_tag=aweme_images")
+                    || existing.path.lowercased().contains("aweme_images")
+                if (isPostImage && !existingIsPost) || score(url) > score(existing) {
+                    groups[key] = url
+                }
+            } else {
+                order.append(key)
+                groups[key] = url
+            }
+        }
+        return order.compactMap { groups[$0] }
     }
 
     static func isPlayURI(_ value: String) -> Bool {
@@ -413,6 +454,21 @@ struct DouyinParser: PlatformParser {
             URLQueryItem(name: "line", value: String(line))
         ]
         return components.url
+    }
+
+    private static func isUsableVideoURL(_ url: URL) -> Bool {
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let videoID = components.queryItems?.first(where: { $0.name == "video_id" })?.value,
+           videoID.contains("://") {
+            return false
+        }
+        let host = url.host()?.lowercased() ?? ""
+        let path = url.path.lowercased()
+        return host.contains("snssdk")
+            || host.contains("douyinvod")
+            || host.contains("ixigua")
+            || path.contains("/play/")
+            || ["mp4", "m3u8"].contains(url.pathExtension.lowercased())
     }
 
     private static func noWatermarkVariant(of url: URL) -> URL? {
