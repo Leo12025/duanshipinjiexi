@@ -6,16 +6,17 @@ struct ItemCard: View {
     var isSelected = false
     var showsDetails = true
     var fixedSize: CGFloat? = nil
+    var coverAspectRatio: CGFloat = 1
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Group {
                 if let fixedSize {
                     coverContent
-                        .frame(width: fixedSize, height: fixedSize)
+                        .frame(width: fixedSize, height: fixedSize / coverAspectRatio)
                 } else {
                     Color.clear
-                        .aspectRatio(1, contentMode: .fit)
+                        .aspectRatio(coverAspectRatio, contentMode: .fit)
                         .frame(maxWidth: .infinity)
                         .overlay {
                             coverContent

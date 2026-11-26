@@ -127,6 +127,30 @@ struct LibraryListView: View {
         return floor(available / CGFloat(columns))
     }
 
+    private func coverAspectRatio(for item: LibraryItem) -> CGFloat {
+        item.kindEnum == .video ? 3.0 / 4.0 : 1
+    }
+
+    private func estimatedCardHeight(for item: LibraryItem, width: CGFloat) -> CGFloat {
+        if filter == .trash { return 108 }
+        return width / coverAspectRatio(for: item) + 44
+    }
+
+    private func distribute(
+        _ items: [LibraryItem],
+        into columns: Int,
+        width: CGFloat
+    ) -> [[LibraryItem]] {
+        var buckets = Array(repeating: [LibraryItem](), count: columns)
+        var heights = Array(repeating: CGFloat(0), count: columns)
+        for item in items {
+            let target = heights.indices.min { heights[$0] < heights[$1] } ?? 0
+            buckets[target].append(item)
+            heights[target] += estimatedCardHeight(for: item, width: width) + 12
+        }
+        return buckets
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -157,15 +181,15 @@ struct LibraryListView: View {
                                                 .font(.headline)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                                            LazyVGrid(
-                                                columns: Array(
-                                                    repeating: GridItem(.fixed(width), spacing: 12),
-                                                    count: columns
-                                                ),
-                                                spacing: 12
-                                            ) {
-                                                ForEach(group.items) { item in
-                                                    card(for: item, size: width)
+                                            let buckets = distribute(group.items, into: columns, width: width)
+                                            HStack(alignment: .top, spacing: 12) {
+                                                ForEach(Array(buckets.enumerated()), id: \.offset) { _, bucket in
+                                                    LazyVStack(alignment: .leading, spacing: 12) {
+                                                        ForEach(bucket) { item in
+                                                            card(for: item, size: width)
+                                                        }
+                                                    }
+                                                    .frame(width: width, alignment: .leading)
                                                 }
                                             }
                                         }
@@ -302,13 +326,19 @@ struct LibraryListView: View {
                     item: item,
                     isSelected: selectedIDs.contains(item.id),
                     showsDetails: false,
-                    fixedSize: size
+                    fixedSize: size,
+                    coverAspectRatio: coverAspectRatio(for: item)
                 )
             }
             .buttonStyle(.plain)
         } else {
             NavigationLink(value: item) {
-                ItemCard(item: item, showsDetails: false, fixedSize: size)
+                ItemCard(
+                    item: item,
+                    showsDetails: false,
+                    fixedSize: size,
+                    coverAspectRatio: coverAspectRatio(for: item)
+                )
                     .contextMenu {
                         Button(item.isFavorite ? "取消收藏" : "收藏") {
                             item.isFavorite.toggle()
