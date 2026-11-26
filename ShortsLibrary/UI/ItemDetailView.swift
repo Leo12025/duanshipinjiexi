@@ -229,14 +229,16 @@ struct ItemDetailView: View {
             let videos = item.livePhotoVideoFiles
                 .filter { $0.existsOnDisk }
                 .reduce(into: [:]) { $0[$1.orderIndex] = $1 }
-            ImageViewerView(files: files, livePhotoVideos: videos)
-                .frame(height: 320)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    fullScreenIndex = 0
+            ImageViewerView(
+                files: files,
+                livePhotoVideos: videos,
+                onTap: { index in
+                    fullScreenIndex = index
                     showingFullScreenImages = true
                 }
+            )
+                .frame(height: 320)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let cover = item.coverFile, cover.existsOnDisk {
             LocalImageView(url: cover.fileURL, animated: cover.isAnimated)
                 .frame(maxHeight: 300)

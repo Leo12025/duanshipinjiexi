@@ -92,8 +92,9 @@ struct ItemCard: View {
                     .padding(8)
             }
 
+        }
+        .overlay(alignment: .bottomTrailing) {
             TypeBadge(item: item)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .padding(8)
         }
     }
@@ -131,9 +132,12 @@ struct TypeBadge: View {
         Text(ItemCard.typeBadgeText(for: item))
             .font(.caption2.weight(.semibold))
             .foregroundStyle(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(.black.opacity(0.6), in: Capsule())
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(.black.opacity(0.82), in: Capsule())
+            .overlay {
+                Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5)
+            }
     }
 }
 
@@ -256,12 +260,12 @@ struct RecentItemCard: View {
         VStack(alignment: .leading, spacing: 6) {
             Color.clear
                 .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    MediaThumbnail(item: item)
+                }
                 .overlay(alignment: .bottomTrailing) {
-                    ZStack(alignment: .bottomTrailing) {
-                        MediaThumbnail(item: item)
-                        TypeBadge(item: item)
-                            .padding(6)
-                    }
+                    TypeBadge(item: item)
+                        .padding(6)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 

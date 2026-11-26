@@ -292,19 +292,19 @@ struct LivePhotoView: View {
                 LocalImageView(url: imageURL)
             }
             if videoURL != nil {
-                Label("LIVE", systemImage: "livephoto")
-                    .font(.caption2.weight(.bold))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(.black.opacity(0.55), in: Capsule())
-                    .foregroundStyle(.white)
-                    .padding(8)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { showingVideo.toggle() }
+                } label: {
+                    Label(showingVideo ? "图片" : "LIVE", systemImage: showingVideo ? "photo" : "livephoto")
+                        .font(.caption2.weight(.bold))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.55), in: Capsule())
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+                .padding(8)
             }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard videoURL != nil else { return }
-            withAnimation(.easeInOut(duration: 0.15)) { showingVideo.toggle() }
         }
     }
 }
@@ -312,16 +312,19 @@ struct LivePhotoView: View {
 struct ImageViewerView: View {
     let files: [MediaFile]
     var livePhotoVideos: [Int: MediaFile] = [:]
+    var onTap: ((Int) -> Void)? = nil
     @State private var selection = 0
 
     var body: some View {
         TabView(selection: $selection) {
-            ForEach(files) { file in
+            ForEach(Array(files.enumerated()), id: \.element.id) { index, file in
                 LivePhotoView(
                     imageURL: file.fileURL,
                     videoURL: livePhotoVideos[file.orderIndex]?.fileURL
                 )
-                .tag(file.orderIndex)
+                .tag(index)
+                .contentShape(Rectangle())
+                .onTapGesture { onTap?(index) }
             }
         }
         .tabViewStyle(.page)
