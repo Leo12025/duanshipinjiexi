@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
@@ -123,6 +124,22 @@ struct HomeView: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .focused($inputFocused)
+                .toolbar {
+                    ToolbarItem(placement: .keyboard) {
+                        HStack {
+                            Button("粘贴并解析") {
+                                if let pasted = UIPasteboard.general.string, pasted.isEmpty == false {
+                                    inputText = pasted
+                                    Task { await ingest(text: pasted) }
+                                }
+                                inputFocused = false
+                            }
+                            .disabled(isParsing)
+                            Spacer()
+                            Button("完成") { inputFocused = false }
+                        }
+                    }
+                }
 
             if let parseMessage {
                 Text(parseMessage)

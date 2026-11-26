@@ -7,6 +7,8 @@ struct AddLinkView: View {
 
     let initialURL: URL?
 
+    @FocusState private var inputFocused: Bool
+
     @State private var text = ""
     @State private var isWorking = false
     @State private var errorMessage: String?
@@ -23,6 +25,12 @@ struct AddLinkView: View {
                         .frame(minHeight: 90)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
+                        .focused($inputFocused)
+                        .toolbar {
+                            ToolbarItem(placement: .keyboard) {
+                                Button("完成") { inputFocused = false }
+                            }
+                        }
                 } header: {
                     Text("分享文案或链接")
                 } footer: {
@@ -56,13 +64,22 @@ struct AddLinkView: View {
                     .disabled(isWorking)
                 }
             }
-            .alert("提示", isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
-            )) {
-                Button("好的", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "")
+            .safeAreaInset(edge: .bottom) {
+                if let errorMessage {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("知道了") { self.errorMessage = nil }
+                            .font(.caption)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                }
             }
             .onAppear {
                 if let initialURL {

@@ -28,6 +28,8 @@ enum IngestOutcome {
 
 @MainActor
 enum LinkIngestService {
+    private static var inFlight: [String: Task<IngestOutcome, Error>] = [:]
+
     static func detectPlatform(in text: String) -> String? {
         guard let url = LinkExtractor.firstURL(in: text),
               let parser = ParserRegistry.parser(for: url) else { return nil }
@@ -44,6 +46,19 @@ enum LinkIngestService {
 
     @discardableResult
     static func ingest(url: URL, modelContext: ModelContext) async throws -> IngestOutcome {
+        let key = url.absoluteString
+        if let task = inFlight[key] {
+            return try await task.value
+        }
+        let task = Task {
+            try await ingestUncached(url: url, modelContext: modelContext)
+        }
+        inFlight[key] = task
+        defer { inFlight[key] = nil }
+        return try await task.value
+    }
+
+    private static func ingestUncached(url: URL, modelContext: ModelContext) async throws -> IngestOutcome {
         guard let parser = ParserRegistry.parser(for: url) else {
             throw AppError.unsupportedPlatform(url.host() ?? "未知")
         }
@@ -73,8 +88,6 @@ enum LinkIngestService {
             includeTrashed: true
         ) != nil
         let item = try LibraryRepository.shared.makeItem(from: parsed, in: modelContext)
-        item.downloadFailed = false
-        item.lastDownloadError = nil
         item.updatedAt = Date()
         try? modelContext.save()
 

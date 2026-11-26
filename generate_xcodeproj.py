@@ -22,6 +22,7 @@ test_swift_files = sorted(
     str(path.relative_to(ROOT)) for path in TEST_ROOT.rglob("*.swift")
 ) if TEST_ROOT.exists() else []
 asset_path = "ShortsLibrary/Assets.xcassets"
+localization_path = "ShortsLibrary/zh-Hans.lproj"
 privacy_path = "ShortsLibrary/PrivacyInfo.xcprivacy"
 info_path = "ShortsLibrary/Info.plist"
 product_path = "ShortsLibrary.app"
@@ -229,6 +230,19 @@ add(
 add(asset_build, isa="PBXBuildFile", fileRef=asset_ref)
 resource_ids.append(asset_build)
 objects[sources_group]["children"].append(asset_ref)
+
+localization_ref = ident("file:" + localization_path)
+localization_build = ident("build:" + localization_path)
+add(
+    localization_ref,
+    isa="PBXFileReference",
+    lastKnownFileType="folder",
+    path=Path(localization_path).name,
+    sourceTree="<group>",
+)
+add(localization_build, isa="PBXBuildFile", fileRef=localization_ref)
+resource_ids.append(localization_build)
+objects[sources_group]["children"].append(localization_ref)
 
 privacy_ref = ident("file:" + privacy_path)
 privacy_build = ident("build:" + privacy_path)
@@ -482,9 +496,9 @@ add(
     },
     buildConfigurationList=project_cfg_list,
     compatibilityVersion="Xcode 14.0",
-    developmentRegion="en",
+    developmentRegion="zh-Hans",
     hasScannedForEncodings="0",
-    knownRegions=["en", "Base"],
+    knownRegions=["zh-Hans", "en", "Base"],
     mainGroup=main_group,
     productRefGroup=products_group,
     projectDirPath="",

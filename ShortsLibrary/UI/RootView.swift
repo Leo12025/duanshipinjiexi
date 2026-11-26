@@ -16,6 +16,7 @@ struct RootView: View {
     @State private var homeResetID = UUID()
     @State private var loginPlatform: PlatformLogin?
     @State private var alertMessage: String?
+    @State private var toastMessage: String?
     @State private var detectedLink: URL?
     @State private var detectedPlatform = ""
 
@@ -41,6 +42,27 @@ struct RootView: View {
                 .tag(2)
         }
         .tint(.accentColor)
+        .overlay(alignment: .bottom) {
+            if let toastMessage {
+                Text(toastMessage)
+                    .font(.subheadline.weight(.medium))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.black.opacity(0.78), in: Capsule())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 78)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: toastMessage)
+        .task(id: toastMessage) {
+            guard toastMessage != nil else { return }
+            try? await Task.sleep(nanoseconds: 2_600_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { toastMessage = nil }
+        }
         .sheet(item: $loginPlatform) { platform in
             PlatformLoginView(platform: platform)
         }
@@ -56,7 +78,9 @@ struct RootView: View {
             get: { detectedLink != nil },
             set: { if !$0 { detectedLink = nil } }
         )) {
-            Button("忽略", role: .cancel) {}
+            Button("忽略", role: .cancel) {
+                lastPromptedLink = ""
+            }
             Button("去解析") {
                 guard let link = detectedLink else { return }
                 detectedLink = nil
@@ -94,12 +118,12 @@ struct RootView: View {
     }
 
     private func ingestDirectly(url: URL) async {
-        alertMessage = "正在解析链接..."
+        toastMessage = "正在解析链接…"
         do {
             let outcome = try await LinkIngestService.ingest(url: url, modelContext: modelContext)
-            alertMessage = outcome.message
+            toastMessage = outcome.message
         } catch {
-            alertMessage = error.localizedDescription
+            toastMessage = error.localizedDescription
         }
     }
 
