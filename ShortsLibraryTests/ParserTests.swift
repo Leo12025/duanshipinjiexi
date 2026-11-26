@@ -255,6 +255,59 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(info.videoURLs.isEmpty)
     }
 
+    func testXiaohongshuImageListExtraction() {
+        let html = #"""
+        <script>{"data":{"items":[{"note_card":{"image_list":[{"url":"http://sns-webpic-qc.xhscdn.com/1040g008/aaa"},{"url":"http://sns-webpic-qc.xhscdn.com/1040g008/bbb"}]}}]},"imageList":[{"url":"http://sns-webpic-qc.xhscdn.com/1040g008/ccc"},{"url":"http://sns-webpic-qc.xhscdn.com/1040g008/ddd"}]}</script>
+        """#
+        let page = XiaohongshuParser().extractPageData(from: html)
+        XCTAssertEqual(page.images.count, 4)
+        XCTAssertTrue(page.images.contains { $0.absoluteString.contains("1040g008/ddd") })
+    }
+
+    func testXiaohongshuNestedImageListExtraction() {
+        let html = #"""
+        <script>{"imageList":[{"traceId":"","infoList":[{"imageScene":"H5_DTL","url":"http:\u002F\u002Fsns-webpic-qc.xhscdn.com\u002F1040g008\u002Faaa"},{"imageScene":"H5_PRV","url":"http:\u002F\u002Fsns-webpic-qc.xhscdn.com\u002F1040g008\u002Fbbb"}]}]}</script>
+        """#
+        let page = XiaohongshuParser().extractPageData(from: html)
+        XCTAssertEqual(page.images.count, 2)
+    }
+
+    func testXiaohongshuPrefersDetailImageScene() {
+        let html = #"""
+        <script>{"imageList":[{"infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/a/detail.jpg"},{"imageScene":"H5_PRV","url":"http://sns-webpic-qc.xhscdn.com/a/preview.jpg"}]}]}</script>
+        """#
+        let page = XiaohongshuParser().extractPageData(from: html)
+        XCTAssertEqual(page.images.count, 1)
+        XCTAssertTrue(page.images.first?.absoluteString.contains("detail.jpg") == true)
+    }
+
+    func testXiaohongshuLivePhotoVideoExtraction() {
+        let html = #"""
+        <script>{"imageList":[
+          {"livePhoto":true,"infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/a/one.jpg"}],"stream":{"h264":[{"masterUrl":"http://sns-video-v6.xhscdn.com/stream/one.mp4"}]}},
+          {"livePhoto":true,"infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/a/two.jpg"}],"stream":{"h264":[{"masterUrl":"http://sns-video-v6.xhscdn.com/stream/two.mp4"}]}}
+        ]}</script>
+        """#
+        let page = XiaohongshuParser().extractPageData(from: html)
+        XCTAssertEqual(page.images.count, 2)
+        XCTAssertEqual(page.livePhotoVideos.count, 2)
+        XCTAssertTrue(page.livePhotoVideos[0]?.absoluteString.contains("one.mp4") == true)
+        XCTAssertTrue(page.livePhotoVideos[1]?.absoluteString.contains("two.mp4") == true)
+    }
+
+    func testXiaohongshuDOMImageExtraction() {
+        let html = #"""
+        <html><body>
+        <img class="avatar" src="http://sns-avatar-qc.xhscdn.com/avatar/1.jpg">
+        <img src="http://sns-webpic-qc.xhscdn.com/1040g008/aaa">
+        <img data-src="http://sns-webpic-qc.xhscdn.com/1040g008/bbb">
+        </body></html>
+        """#
+        let page = XiaohongshuParser().extractPageData(from: html)
+        XCTAssertEqual(page.images.count, 2)
+        XCTAssertFalse(page.images.contains { $0.host()?.contains("avatar") == true })
+    }
+
     func testKindResolution() {
         XCTAssertEqual(MediaKindResolver.resolve(videos: 1, images: 0, audios: 0), .video)
         XCTAssertEqual(MediaKindResolver.resolve(videos: 0, images: 1, audios: 0), .image)

@@ -131,6 +131,7 @@ struct ParsedMedia {
     let pageURL: URL
     let coverURL: URL?
     let images: [URL]
+    var livePhotoVideos: [URL?] = []
     let videos: [VideoCandidate]
     let audioURL: URL?
     let needsAudioMux: Bool

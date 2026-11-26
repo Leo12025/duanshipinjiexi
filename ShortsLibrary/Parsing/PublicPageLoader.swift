@@ -46,6 +46,16 @@ enum PublicPageLoader {
         return (html, result.url)
     }
 
+    static func loadXiaohongshuWithCapture(url: URL) async throws -> (String, URL) {
+        let result = try await WebViewPageLoader.loadDetailed(from: url)
+        var html = result.html
+        if !result.capturedJSON.isEmpty {
+            html += result.capturedJSON.map { "<script>\($0)</script>" }.joined()
+        }
+        try ensureNotBlocked(html: html, url: result.url)
+        return (html, result.url)
+    }
+
     private static func ensureNotBlocked(html: String, url: URL) throws {
         let lower = html.lowercased()
         if rateLimitKeywords.contains(where: { lower.contains($0) }) {

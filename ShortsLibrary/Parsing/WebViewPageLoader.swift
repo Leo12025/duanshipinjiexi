@@ -28,7 +28,8 @@ final class WebViewPageLoader: NSObject, WKNavigationDelegate {
       window.__douyinCapturedJSON = [];
       const markers = [
         'aweme_detail', 'aweme_details', 'finder', 'objectNonceId',
-        'video_url', 'download_url', 'play_addr', 'weixin.qq.com'
+        'video_url', 'download_url', 'play_addr', 'weixin.qq.com',
+        'imageList', 'image_list', 'noteDetailMap', 'sns-webpic'
       ];
       const store = (text) => {
         if (!text || window.__douyinCapturedJSON.length >= 12) return;
