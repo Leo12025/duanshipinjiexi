@@ -20,7 +20,13 @@ struct XiaohongshuParser: PlatformParser {
             throw AppError.parsingFailed("无法提取小红书笔记 ID")
         }
 
-        var assets = metadata.imageURLs.map { ImageAsset(url: $0, livePhotoVideo: nil) } + page.assets
+        var assets = metadata.imageURLs.compactMap { url -> ImageAsset? in
+            let host = url.host()?.lowercased() ?? ""
+            guard host.contains("sns-webpic") || host.contains("xhscdn") else { return nil }
+            guard let fileID = fileID(from: url.absoluteString),
+                  let original = originalImageURL(fileID: fileID) else { return nil }
+            return ImageAsset(url: original, livePhotoVideo: nil)
+        } + page.assets
         var seenImage = Set<String>()
         assets = assets.filter { seenImage.insert($0.url.mediaDedupeKey).inserted }
         var videoURLs = metadata.videoURLs + page.videos
@@ -84,16 +90,15 @@ struct XiaohongshuParser: PlatformParser {
 
         result.assets = extractImageAssets(from: html)
 
-        let imagePattern = #"content=["'](https?://sns-webpic-[^"']+)["']"#
-        var fallbackURLs: [URL] = []
-        for raw in captures(pattern: imagePattern, in: html) {
-            guard let url = makeURL(from: raw) else { continue }
-            fallbackURLs.append(url)
-        }
-        fallbackURLs += extractDOMImageURLs(from: html)
-        var known = Set(result.assets.map { $0.url.mediaDedupeKey })
-        for url in fallbackURLs where known.insert(url.mediaDedupeKey).inserted {
-            result.assets.append(ImageAsset(url: url, livePhotoVideo: nil))
+        if result.assets.isEmpty {
+            let imagePattern = #"content=["'](https?://sns-webpic-[^"']+)["']"#
+            for raw in captures(pattern: imagePattern, in: html) {
+                guard let url = makeURL(from: raw),
+                      let fileID = fileID(from: url.absoluteString),
+                      let original = originalImageURL(fileID: fileID),
+                      !result.assets.contains(where: { $0.url == original }) else { continue }
+                result.assets.append(ImageAsset(url: original, livePhotoVideo: nil))
+            }
         }
 
         let videoPattern = #"content=["'](https?://sns-video-[^"']+)["']"#
@@ -134,24 +139,51 @@ struct XiaohongshuParser: PlatformParser {
     }
 
     private func noteImageURL(in dictionary: [String: Any]) -> URL? {
+        if let fileID = dictionary["fileId"] as? String, !fileID.isEmpty,
+           let url = originalImageURL(fileID: fileID) {
+            return url
+        }
+        var detailRaw: String?
         if let infoList = dictionary["infoList"] as? [Any] {
             for entry in infoList {
                 guard let info = entry as? [String: Any] else { continue }
                 let scene = (info["imageScene"] as? String)?.uppercased() ?? ""
                 guard scene.isEmpty || scene == "H5_DTL" else { continue }
-                if let raw = info["url"] as? String,
-                   let url = makeURL(from: raw),
-                   isNoteImage(url) {
-                    return url
+                if let raw = info["url"] as? String, isNoteImageString(raw) {
+                    detailRaw = raw
+                    break
                 }
             }
         }
-        if let raw = dictionary["url"] as? String,
-           let url = makeURL(from: raw),
-           isNoteImage(url) {
-            return url
+        if detailRaw == nil, let raw = dictionary["url"] as? String, isNoteImageString(raw) {
+            detailRaw = raw
         }
-        return nil
+        guard let raw = detailRaw,
+              let fileID = fileID(from: raw),
+              let url = originalImageURL(fileID: fileID) else { return nil }
+        return url
+    }
+
+    private func fileID(from raw: String) -> String? {
+        let cleaned = decode(raw)
+            .replacingOccurrences(of: "\\u002F", with: "/")
+            .replacingOccurrences(of: "\\/", with: "/")
+        guard let url = URL(string: cleaned),
+              let host = url.host()?.lowercased(),
+              host.contains("xhscdn") else { return nil }
+        let path = url.path
+        let parts = path.split(separator: "/").map(String.init)
+        guard let last = parts.last else { return nil }
+        return last.split(separator: "!").first.map(String.init)
+    }
+
+    private func originalImageURL(fileID: String) -> URL? {
+        URL(string: "https://ci.xiaohongshu.com/\(fileID)")
+    }
+
+    private func isNoteImageString(_ raw: String) -> Bool {
+        guard let url = makeURL(from: raw) else { return false }
+        return isNoteImage(url)
     }
 
     private func livePhotoVideoURL(in dictionary: [String: Any]) -> URL? {
@@ -216,20 +248,6 @@ struct XiaohongshuParser: PlatformParser {
             cursor = text.index(after: end)
         }
         return arrays
-    }
-
-    private func extractDOMImageURLs(from html: String) -> [URL] {
-        var urls: [URL] = []
-        for tag in captures(pattern: #"(<img\b[^>]*>)"#, in: html) {
-            for attribute in ["src", "data-src", "data-original", "data-lazy-src"] {
-                guard let raw = firstCapture(
-                    pattern: #"\#(attribute)\s*=\s*["']([^"']+)["']"#,
-                    in: tag
-                ), let url = makeURL(from: raw), isNoteImage(url), !urls.contains(url) else { continue }
-                urls.append(url)
-            }
-        }
-        return urls
     }
 
     private func isNoteImage(_ url: URL) -> Bool {

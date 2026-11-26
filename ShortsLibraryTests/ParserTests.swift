@@ -257,55 +257,61 @@ final class ParserTests: XCTestCase {
 
     func testXiaohongshuImageListExtraction() {
         let html = #"""
-        <script>{"data":{"items":[{"note_card":{"image_list":[{"url":"http://sns-webpic-qc.xhscdn.com/1040g008/aaa"},{"url":"http://sns-webpic-qc.xhscdn.com/1040g008/bbb"}]}}]},"imageList":[{"url":"http://sns-webpic-qc.xhscdn.com/1040g008/ccc"},{"url":"http://sns-webpic-qc.xhscdn.com/1040g008/ddd"}]}</script>
+        <script>{"imageList":[
+          {"fileId":"fileA","infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/20260101/hashA/fileA!h5_1080jpg"}]},
+          {"fileId":"fileB","infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/20260101/hashB/fileB!h5_1080jpg"}]}
+        ]}</script>
         """#
         let page = XiaohongshuParser().extractPageData(from: html)
-        XCTAssertEqual(page.images.count, 4)
-        XCTAssertTrue(page.images.contains { $0.absoluteString.contains("1040g008/ddd") })
+        XCTAssertEqual(page.images.count, 2)
+        XCTAssertEqual(page.images.map(\.absoluteString), [
+            "https://ci.xiaohongshu.com/fileA",
+            "https://ci.xiaohongshu.com/fileB"
+        ])
     }
 
     func testXiaohongshuNestedImageListExtraction() {
         let html = #"""
-        <script>{"imageList":[{"traceId":"","infoList":[{"imageScene":"H5_DTL","url":"http:\u002F\u002Fsns-webpic-qc.xhscdn.com\u002F1040g008\u002Faaa"},{"imageScene":"H5_PRV","url":"http:\u002F\u002Fsns-webpic-qc.xhscdn.com\u002F1040g008\u002Fbbb"}]}]}</script>
+        <script>{"imageList":[{"traceId":"","infoList":[{"imageScene":"H5_DTL","url":"http:\u002F\u002Fsns-webpic-qc.xhscdn.com\u002F20260101\u002FhashA\u002FfileA!h5_1080jpg"},{"imageScene":"H5_PRV","url":"http:\u002F\u002Fsns-webpic-qc.xhscdn.com\u002F20260101\u002FhashB\u002FfileB!style_x"}]}]}</script>
         """#
         let page = XiaohongshuParser().extractPageData(from: html)
-        XCTAssertEqual(page.images.count, 2)
+        XCTAssertEqual(page.images.map(\.absoluteString), ["https://ci.xiaohongshu.com/fileA"])
     }
 
     func testXiaohongshuPrefersDetailImageScene() {
         let html = #"""
-        <script>{"imageList":[{"infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/a/detail.jpg"},{"imageScene":"H5_PRV","url":"http://sns-webpic-qc.xhscdn.com/a/preview.jpg"}]}]}</script>
+        <script>{"imageList":[{"infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/20260101/hashA/detail!h5_1080jpg"},{"imageScene":"H5_PRV","url":"http://sns-webpic-qc.xhscdn.com/20260101/hashB/preview!style_x"}]}]}</script>
         """#
         let page = XiaohongshuParser().extractPageData(from: html)
-        XCTAssertEqual(page.images.count, 1)
-        XCTAssertTrue(page.images.first?.absoluteString.contains("detail.jpg") == true)
+        XCTAssertEqual(page.images.map(\.absoluteString), ["https://ci.xiaohongshu.com/detail"])
     }
 
     func testXiaohongshuLivePhotoVideoExtraction() {
         let html = #"""
         <script>{"imageList":[
-          {"livePhoto":true,"infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/a/one.jpg"}],"stream":{"h264":[{"masterUrl":"http://sns-video-v6.xhscdn.com/stream/one.mp4"}]}},
-          {"livePhoto":true,"infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/a/two.jpg"}],"stream":{"h264":[{"masterUrl":"http://sns-video-v6.xhscdn.com/stream/two.mp4"}]}}
+          {"fileId":"one","livePhoto":true,"infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/20260101/hashA/one!h5_1080jpg"}],"stream":{"h264":[{"masterUrl":"http://sns-video-v6.xhscdn.com/stream/one.mp4"}]}},
+          {"fileId":"two","livePhoto":true,"infoList":[{"imageScene":"H5_DTL","url":"http://sns-webpic-qc.xhscdn.com/20260101/hashB/two!h5_1080jpg"}],"stream":{"h264":[{"masterUrl":"http://sns-video-v6.xhscdn.com/stream/two.mp4"}]}}
         ]}</script>
         """#
         let page = XiaohongshuParser().extractPageData(from: html)
-        XCTAssertEqual(page.images.count, 2)
+        XCTAssertEqual(page.images.map(\.absoluteString), [
+            "https://ci.xiaohongshu.com/one",
+            "https://ci.xiaohongshu.com/two"
+        ])
         XCTAssertEqual(page.livePhotoVideos.count, 2)
         XCTAssertTrue(page.livePhotoVideos[0]?.absoluteString.contains("one.mp4") == true)
-        XCTAssertTrue(page.livePhotoVideos[1]?.absoluteString.contains("two.mp4") == true)
     }
 
-    func testXiaohongshuDOMImageExtraction() {
+    func testXiaohongshuDOMImagesAreIgnored() {
         let html = #"""
         <html><body>
         <img class="avatar" src="http://sns-avatar-qc.xhscdn.com/avatar/1.jpg">
-        <img src="http://sns-webpic-qc.xhscdn.com/1040g008/aaa">
-        <img data-src="http://sns-webpic-qc.xhscdn.com/1040g008/bbb">
+        <img src="http://sns-webpic-qc.xhscdn.com/20260101/hashA/fileA!h5_1080jpg">
         </body></html>
         """#
         let page = XiaohongshuParser().extractPageData(from: html)
-        XCTAssertEqual(page.images.count, 2)
-        XCTAssertFalse(page.images.contains { $0.host()?.contains("avatar") == true })
+        XCTAssertEqual(page.images.count, 1)
+        XCTAssertEqual(page.images.first?.absoluteString, "https://ci.xiaohongshu.com/fileA")
     }
 
     func testKindResolution() {
