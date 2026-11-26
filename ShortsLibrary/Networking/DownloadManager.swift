@@ -4,7 +4,7 @@ import Foundation
 final class DownloadManager {
     static let shared = DownloadManager()
 
-    private static let sessionIdentifier = "com.leo.shortslibrary.background"
+    private static let sessionIdentifier = "com.leo12025.shortslibrary.background"
     private let session: URLSession
     private let delegate = DownloadSessionDelegate.shared
     private let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"

@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainStore {
-    private static let service = "com.leo.shortslibrary.ai"
+    private static let service = "com.leo12025.shortslibrary.ai"
 
     static func string(for key: String) -> String? {
         let query: [String: Any] = [

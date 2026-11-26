@@ -647,7 +647,7 @@ common_settings = {
     "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
     "LD_RUNPATH_SEARCH_PATHS": ["$(inherited)", "@executable_path/Frameworks"],
     "MARKETING_VERSION": "1.0",
-    "PRODUCT_BUNDLE_IDENTIFIER": "com.leo.shortslibrary",
+    "PRODUCT_BUNDLE_IDENTIFIER": "com.leo12025.shortslibrary",
     "PRODUCT_NAME": "$(TARGET_NAME)",
     "SDKROOT": "iphoneos",
     "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
@@ -698,7 +698,7 @@ for target_name, config_name, settings in [
 
 test_overrides = {
     "GENERATE_INFOPLIST_FILE": "YES",
-    "PRODUCT_BUNDLE_IDENTIFIER": "com.leo.shortslibrary.tests",
+    "PRODUCT_BUNDLE_IDENTIFIER": "com.leo12025.shortslibrary.tests",
     "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/ShortsLibrary.app/ShortsLibrary",
     "BUNDLE_LOADER": "$(TEST_HOST)",
 }
@@ -716,7 +716,7 @@ for config_name, settings in [
 parent_bundle_id = (
     existing_settings.get(("ShortsLibrary", "Release"), {}).get("PRODUCT_BUNDLE_IDENTIFIER")
     or existing_settings.get(("ShortsLibrary", "Debug"), {}).get("PRODUCT_BUNDLE_IDENTIFIER")
-    or "com.leo.shortslibrary"
+    or "com.leo12025.shortslibrary"
 )
 widget_overrides = {
     "COPY_PHASE_STRIP": "NO",

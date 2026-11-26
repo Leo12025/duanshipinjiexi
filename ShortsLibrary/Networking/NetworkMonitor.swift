@@ -10,7 +10,7 @@ final class NetworkMonitor: ObservableObject {
     @Published private(set) var isWiFi = false
 
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "com.leo.shortslibrary.network")
+    private let queue = DispatchQueue(label: "com.leo12025.shortslibrary.network")
 
     private init() {
         let path = monitor.currentPath

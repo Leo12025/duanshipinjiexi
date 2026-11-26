@@ -37,7 +37,7 @@ AI 解析默认关闭。开启后，标题、平台文案、封面和抽帧画�
 1. 用 Xcode 打开 `ShortsLibrary.xcodeproj`
 2. 选择目标设备或模拟器
 3. 在 Signing & Capabilities 中选择你的 Personal Team（免费 Apple ID 即可）
-4. 修改 Bundle Identifier 为唯一值（默认 `com.leo.shortslibrary`）
+4. 修改 Bundle Identifier 为唯一值（默认 `com.leo12025.shortslibrary`）
 5. Command + R 运行
 
 免费签名 7 天到期后，不要删除 App，直接重新从 Xcode 运行覆盖安装即可保留沙盒数据。侧栏“数据”区可导出/恢复 `library.json`；该 JSON 只含元数据，原媒体文件请通过系统分享面板另行备份。
