@@ -232,27 +232,18 @@ add(asset_build, isa="PBXBuildFile", fileRef=asset_ref)
 resource_ids.append(asset_build)
 objects[sources_group]["children"].append(asset_ref)
 
-localization_group = ident("variant:Localizable.strings")
-localization_ref = ident("file:" + localization_path + "/Localizable.strings")
-localization_build = ident("build:" + localization_path + "/Localizable.strings")
-add(
-    localization_group,
-    isa="PBXVariantGroup",
-    name="Localizable.strings",
-    sourceTree="<group>",
-    children=[localization_ref],
-)
+localization_ref = ident("file:" + localization_path)
+localization_build = ident("build:" + localization_path)
 add(
     localization_ref,
     isa="PBXFileReference",
-    lastKnownFileType="text.plist.strings",
-    name="zh-Hans",
-    path=str(Path(localization_path) / "Localizable.strings"),
+    lastKnownFileType="folder",
+    path=Path(localization_path).name,
     sourceTree="<group>",
 )
-add(localization_build, isa="PBXBuildFile", fileRef=localization_group)
+add(localization_build, isa="PBXBuildFile", fileRef=localization_ref)
 resource_ids.append(localization_build)
-objects[sources_group]["children"].append(localization_group)
+objects[sources_group]["children"].append(localization_ref)
 
 privacy_ref = ident("file:" + privacy_path)
 privacy_build = ident("build:" + privacy_path)
@@ -525,7 +516,7 @@ project = {
 }
 
 def pbxproj_quote(value):
-    if re.fullmatch(r"[A-Za-z0-9_./$(){}@-]+", value):
+    if re.fullmatch(r"[A-Za-z0-9_./-]+", value):
         return value
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
