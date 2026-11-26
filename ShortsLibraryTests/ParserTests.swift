@@ -373,6 +373,20 @@ final class ParserTests: XCTestCase {
         )
     }
 
+    func testFollowListParsesCamelCaseUsers() async throws {
+        let json = #"""
+        [{"user":{"secUid":"MS4w_test","nickname":"小明","avatarThumb":{"urlList":["https://example.com/a.jpg"]}}},
+         {"sec_uid":"MS4w_other","nickname":"小红","avatar_thumb":{"url_list":["https://example.com/b.jpg"]}}]
+        """#
+        let array = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [Any] ?? []
+        let drafts = await FollowPageCollector.parseUsers(array)
+        XCTAssertEqual(drafts.count, 2)
+        XCTAssertEqual(drafts[0].platformUserId, "MS4w_test")
+        XCTAssertEqual(drafts[0].displayName, "小明")
+        XCTAssertEqual(drafts[0].avatarURLString, "https://example.com/a.jpg")
+        XCTAssertEqual(drafts[1].platformUserId, "MS4w_other")
+    }
+
     func testUserProvidedShareSamples() async {
         let samples: [(String, String, String, String)] = [
             ("抖音视频", "0.02 复制打开抖音，看看【Helen lin🌷的作品】妈妈的爱是圆的，没有起点，也没有终点。# 我的阳光... https://v.douyin.com/yOeF20Vs-1g/ 10/06 u@f.ba :5pm pQX:/", "https://v.douyin.com/yOeF20Vs-1g/", "抖音"),
