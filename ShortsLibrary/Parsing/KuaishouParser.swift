@@ -4,6 +4,20 @@ struct KuaishouParser: PlatformParser {
     let source: MediaSource = .kuaishou
     let supportedHosts = ["kuaishou.com", "chenzhongtech.com", "gifshow.com"]
 
+    private static let nonContentTitles = [
+        "即将离开微信，打开其他应用", "即将离开微信", "打开其他应用"
+    ]
+
+    static func resolvedTitle(metadata: PageMetadata, sourceID: String) -> String {
+        for value in [metadata.description, metadata.title] {
+            guard let value else { continue }
+            let title = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty, !nonContentTitles.contains(title) else { continue }
+            return title
+        }
+        return "快手内容 \(sourceID)"
+    }
+
     func parse(url: URL) async throws -> ParsedMedia {
         let (html, finalURL) = try await PublicPageLoader.load(url: url)
         let metadata = HTMLMetadataExtractor.extract(html: html, finalURL: finalURL)
@@ -37,7 +51,7 @@ struct KuaishouParser: PlatformParser {
             source: .kuaishou,
             sourceId: sourceId,
             kind: MediaKindResolver.resolve(videos: videos.count, images: images.count, audios: 0),
-            title: metadata.title ?? "快手内容 \(sourceId)",
+            title: Self.resolvedTitle(metadata: metadata, sourceID: sourceId),
             author: metadata.author,
             caption: metadata.description,
             pageURL: finalURL,

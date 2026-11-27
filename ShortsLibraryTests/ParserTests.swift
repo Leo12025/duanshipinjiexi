@@ -76,6 +76,39 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(metadata.imageURLs.contains { $0.host() == "p23.a.yximgs.com" })
     }
 
+    func testKuaishouTitleUsesCaptionInsteadOfWechatPopup() {
+        let html = #"""
+        <script>window.INIT_STATE = {"quickAppStrategy":{"popupConfig":{"title":"即将离开微信，打开其他应用","confirmText":"确定"}},"strongMessage":{"default":{"title":"去快手享超清画质"}},"photo":{"userName":"瑞瑞","caption":"一起踢球吗 #10后 #初中生 #体育生","photoId":"3xg9pj34ceerfeu"}}</script>
+        """#
+        let metadata = HTMLMetadataExtractor.extract(
+            html: html,
+            finalURL: URL(string: "https://m.gifshow.com/fw/photo/3xg9pj34ceerfeu")!
+        )
+        XCTAssertNil(metadata.title)
+        XCTAssertEqual(metadata.description, "一起踢球吗 #10后 #初中生 #体育生")
+        XCTAssertEqual(
+            KuaishouParser.resolvedTitle(metadata: metadata, sourceID: "3xg9pj34ceerfeu"),
+            "一起踢球吗 #10后 #初中生 #体育生"
+        )
+    }
+
+    func testKuaishouTitleFallbackIgnoresWechatPopup() {
+        var metadata = PageMetadata(
+            finalURL: URL(string: "https://v.kuaishou.com/abc12345")!,
+            rawHTML: ""
+        )
+        metadata.title = "作品标题"
+        XCTAssertEqual(
+            KuaishouParser.resolvedTitle(metadata: metadata, sourceID: "3xg9pj34ceerfeu"),
+            "作品标题"
+        )
+        metadata.title = "即将离开微信，打开其他应用"
+        XCTAssertEqual(
+            KuaishouParser.resolvedTitle(metadata: metadata, sourceID: "3xg9pj34ceerfeu"),
+            "快手内容 3xg9pj34ceerfeu"
+        )
+    }
+
     func testDouyinDetailExtractionFromRouterData() {
         let html = #"""
         <script>window._ROUTER_DATA = {"aweme_detail":{"aweme_id":"7711741462283352058","video":{"play_addr":{"url_list":["https://v3-web.douyinvod.com/video.mp4"]}},"image_posters":{"url_list":["https://p3.douyinpic.com/obj/aweme_images/cover.jpg"]}}}</script>

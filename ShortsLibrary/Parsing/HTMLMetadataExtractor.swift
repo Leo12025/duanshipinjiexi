@@ -170,7 +170,11 @@ enum HTMLMetadataExtractor {
             let preceding = ns.substring(
                 with: NSRange(location: start, length: match.range(at: 0).location - start)
             ).lowercased()
-            if ["music", "audio", "bgm", "sound"].contains(where: { preceding.contains($0) }) {
+            let auxiliaryContexts = [
+                "music", "audio", "bgm", "sound",
+                "popup", "quickappstrategy", "strongmessage", "dialog", "alert", "modal"
+            ]
+            if auxiliaryContexts.contains(where: { preceding.contains($0) }) {
                 continue
             }
             return ns.substring(with: capture)
